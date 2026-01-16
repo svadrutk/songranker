@@ -318,18 +318,84 @@ ESLint configuration with Next.js recommended rules.
 
 ---
 
+## 📐 **Theoretical Concepts**
+
+This section documents the theoretical foundations and algorithms used in the Song Ranker project.
+
+---
+
+### **Bradley-Terry Model for Music Preference Sorting**
+
+The Bradley-Terry model is the core ranking algorithm for this project. It's specifically designed to infer a complete ranking from pairwise comparisons, making it perfect for music preference sorting. Instead of asking users to rank all songs at once (overwhelming with 50-200 items), we present two songs at a time and build up a probabilistic strength model.
+
+**Reference**: [Wikipedia - Bradley-Terry Model](https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model)
+
+#### **How It Works**
+
+Each song gets assigned a strength parameter \(p_i\), and when a user chooses song \(i\) over song \(j\), we observe that \(i\) "won" that comparison. The model estimates the probability that users prefer song \(i\) to song \(j\) as:
+
+\[ \Pr(i \text{ beats } j) = \frac{p_i}{p_i + p_j} \]
+
+After collecting multiple comparisons, we use maximum likelihood estimation to find the optimal strength values for all songs, then rank them by their estimated \(p_i\) values.
+
+**Reference**: [DRatings - Creating a Ratings Model with Bradley-Terry](https://www.dratings.com/creating-a-ratings-model-with-bradley-terry/)
+
+#### **Implementation Strategy**
+
+**Data Collection**: Each time a user picks a song, record it as \(w_{ij} = 1\) (song \(i\) beat song \(j\)). For ties, we can either skip recording or use a Bradley-Terry extension that handles draws.
+
+**Reference**: [CRAN - BradleyTerry2 Package](https://cran.r-project.org/web/packages/BradleyTerry2/vignettes/BradleyTerry.html)
+
+**Adaptive Questioning**: We don't need all \(n(n-1)/2\) possible comparisons. Start with a random sample, then strategically select pairs where the model is most uncertain (songs with similar estimated \(p_i\) values). This minimizes comparisons while maximizing information gain.
+
+**Reference**: [DRatings - Creating a Ratings Model with Bradley-Terry](https://www.dratings.com/creating-a-ratings-model-with-bradley-terry/)
+
+**Parameter Estimation**: Use iterative algorithms like MM (minorization-maximization) or Newton-Raphson to solve for the strength parameters. The log-likelihood function we're maximizing is based on observed wins and losses across all comparisons.
+
+**Reference**: [Emergent Mind - Bradley-Terry Ranking System](https://www.emergentmind.com/topics/bradley-terry-ranking-system)
+
+**Handling Contradictions**: Bradley-Terry naturally handles inconsistent choices because it's probabilistic. If a user picks song A over B once but B over A later, the model treats these as statistical observations rather than absolute rules, weighting the more frequent choice.
+
+**Reference**: [James Howard - Bradley-Terry Model and Data-Driven Ranking](https://jameshoward.us/2025/01/31/bradley-terry-model-and-data-driven-ranking)
+
+#### **Completion Criteria**
+
+**Minimum Comparisons**: We need at least \(n-1\) comparisons to connect all items in a preference graph, but practical convergence typically requires \(O(n \log n)\) comparisons.
+
+**Reference**: [DRatings - Creating a Ratings Model with Bradley-Terry](https://www.dratings.com/creating-a-ratings-model-with-bradley-terry/)
+
+**Confidence Threshold**: Stop when the standard errors of parameter estimates fall below a threshold, or when the ranking order stops changing between iterations. Calculate this by monitoring the Fisher information matrix during estimation.
+
+**Reference**: [Emergent Mind - Bradley-Terry Ranking System](https://www.emergentmind.com/topics/bradley-terry-ranking-system)
+
+**Progress Tracking**: Display progress as `comparisons_made / estimated_total`, where estimated total is based on current model uncertainty. Update this dynamically as high-certainty songs require fewer future comparisons.
+
+#### **Advantages for Project Requirements**
+
+The Bradley-Terry approach excels at:
+- **Handling incomplete comparison graphs**: Users can refresh mid-session and resume without breaking the model
+- **Non-transitive preferences**: Resolved by finding the maximum likelihood ranking that best explains all observations (e.g., A>B, B>C, C>A)
+- **Confidence scores**: Provides confidence scores for each ranking position by examining standard errors of estimated parameters (perfect for stretch goal)
+- **Probabilistic nature**: Treats user choices as statistical observations, naturally handling contradictions
+
+**Reference**: [James Howard - Bradley-Terry Model and Data-Driven Ranking](https://jameshoward.us/2025/01/31/bradley-terry-model-and-data-driven-ranking)
+
+---
+
 ## 📝 **Development Notes**
 
 ### **Current Implementation**
 - Basic Next.js setup complete
 - Supabase client configured
+- Bradley-Terry model selected as core ranking algorithm
 - Ready for feature development
 
 ### **Future Considerations**
-- Database schema design
-- API route implementation (if needed)
-- Authentication setup (if needed)
-- Real-time features (if needed)
+- Database schema design (optimized for Bradley-Terry data collection)
+- API route implementation for ranking calculations
+- Parameter estimation algorithm implementation (MM or Newton-Raphson)
+- Adaptive pair selection strategy
+- Confidence score calculation
 
 ---
 

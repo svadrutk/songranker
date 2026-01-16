@@ -21,9 +21,10 @@ Song Ranker is an interactive web application that determines a user's personali
 - ✅ Supabase database connected
 - ✅ Git repository connected
 - ✅ Documentation structure established
+- ✅ Ranking algorithm selected: **Bradley-Terry Model** (see Technical Reference)
 - 🚧 Core features: Not yet implemented
 - 🚧 Database schema: Not yet defined
-- 🚧 Ranking algorithm: Not yet implemented
+- 🚧 Ranking algorithm implementation: Not yet started
 
 ### **Key Metrics**:
 - **Tech Stack**: Next.js 16.1.3, React 19.2.3, TypeScript, Tailwind CSS
@@ -55,14 +56,15 @@ Song Ranker is an interactive web application that determines a user's personali
 - ✅ Git repository connected
 - ✅ Documentation structure established
 - ✅ Project requirements documented
-- 🚧 Database schema design
-- 🚧 Ranking algorithm design
+- ✅ Ranking algorithm selected: **Bradley-Terry Model** (see Technical Reference for details)
+- 🚧 Database schema design (optimized for Bradley-Terry data collection)
+- 🚧 Ranking algorithm implementation
 
 **Next Steps**:
-- Design database schema for songs, comparisons, and rankings
-- Research and select ranking algorithm (e.g., Elo, Bradley-Terry, or custom)
+- Design database schema for songs, comparisons, and rankings (supporting Bradley-Terry model)
+- Implement Bradley-Terry parameter estimation (MM or Newton-Raphson algorithm)
 - Design user interface for pairwise comparisons
-- Implement comparison flow
+- Implement comparison flow with adaptive pair selection
 
 ### **Phase 1: Core Functionality** 📋 **PLANNED**
 **Status**: 📋 Planned
@@ -284,8 +286,9 @@ Database schema will be designed to support:
 - `session_id` (UUID, Foreign Key)
 - `item_a_id` (UUID, Foreign Key to Songs)
 - `item_b_id` (UUID, Foreign Key to Songs)
-- `preference` (Enum: 'A', 'B', 'TIE')
+- `preference` (Enum: 'A', 'B', 'TIE') - Records \(w_{ij} = 1\) for Bradley-Terry model
 - `created_at` (Timestamp)
+- **Note**: This table stores pairwise comparison data for Bradley-Terry parameter estimation
 
 #### **Sessions Table**
 - `id` (UUID, Primary Key)
@@ -302,9 +305,10 @@ Database schema will be designed to support:
 - `session_id` (UUID, Foreign Key)
 - `song_id` (UUID, Foreign Key)
 - `rank` (Integer) - Position in ranking (1 = highest)
-- `score` (Float, Optional) - Algorithm score
-- `confidence` (Float, Optional) - Confidence level
+- `score` (Float, Optional) - Bradley-Terry strength parameter \(p_i\)
+- `confidence` (Float, Optional) - Confidence level from standard errors of parameter estimates
 - `created_at` (Timestamp)
+- **Note**: Strength parameters \(p_i\) are estimated via maximum likelihood from comparisons table
 
 ### **Supabase Configuration**
 - **URL**: https://loqddpjjjakaqgtuvoyn.supabase.co
@@ -346,18 +350,34 @@ The solution will be evaluated on:
 #### **Option 1: Elo Rating System**
 - Pros: Simple, well-understood, handles updates well
 - Cons: May require many comparisons for stable ranking
+- **Status**: ❌ Not selected
 
-#### **Option 2: Bradley-Terry Model**
+#### **Option 2: Bradley-Terry Model** ✅ **SELECTED**
 - Pros: Statistical model designed for pairwise comparisons
 - Cons: More complex implementation
+- **Status**: ✅ **SELECTED** - See Technical Reference for full details
+- **Rationale**: 
+  - Specifically designed for pairwise comparison ranking
+  - Handles incomplete comparison graphs (users can refresh/resume)
+  - Naturally handles non-transitive preferences and contradictions
+  - Provides confidence scores for ranking positions (supports stretch goal)
+  - Probabilistic approach treats user choices as statistical observations
+  - Supports adaptive questioning to minimize comparisons
+- **Reference**: See `TECHNICAL_REFERENCE.md` - Theoretical Concepts section
 
 #### **Option 3: Custom Algorithm**
 - Pros: Tailored to specific requirements
 - Cons: Requires more design and testing
+- **Status**: ❌ Not selected
 
-### **Decision**: To Be Determined
-- Algorithm selection will be documented in DEVELOPMENT_LOG.md
-- Tradeoffs will be documented in README.md
+### **Decision**: ✅ **Bradley-Terry Model Selected**
+- **Selection Date**: January 2025
+- **Documentation**: Full details in `TECHNICAL_REFERENCE.md` - Theoretical Concepts
+- **Implementation Notes**: 
+  - Use MM (minorization-maximization) or Newton-Raphson for parameter estimation
+  - Implement adaptive pair selection based on model uncertainty
+  - Track confidence via Fisher information matrix
+  - Minimum comparisons: \(n-1\) (theoretical), \(O(n \log n)\) (practical)
 
 ---
 
