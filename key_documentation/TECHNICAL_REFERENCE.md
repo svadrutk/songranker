@@ -1,6 +1,6 @@
 # Song Ranker - Technical Reference
 
-**Last Updated**: January 2025  
+**Last Updated**: January 16, 2025  
 **Purpose**: Complete technical documentation for developers  
 **Status**: ✅ **ACTIVE** - Technical reference guide
 
@@ -382,6 +382,224 @@ The Bradley-Terry approach excels at:
 
 ---
 
+## 🔄 **Hybrid SQL/TypeScript Framework**
+
+This project uses a hybrid approach: **SQL for data operations, TypeScript for algorithms**. This framework balances performance, maintainability, and development speed.
+
+### **Core Principle**
+
+**SQL for data, TypeScript for logic**
+
+- **SQL**: Data queries, aggregations, filtering, joins
+- **TypeScript**: Complex algorithms, iterative calculations, business logic
+
+---
+
+### **Decision Matrix**
+
+| Task | Use | Why |
+|------|-----|-----|
+| Fetch comparison data | SQL | Fast aggregation, minimal data transfer |
+| Filter songs by dataset | SQL | Database-level filtering |
+| Count comparisons | SQL | Simple aggregation |
+| Bradley-Terry MM algorithm | TypeScript | Iterative, easier to debug |
+| Parameter estimation | TypeScript | Complex math, better tooling |
+| Pair selection logic | TypeScript | Business logic, uncertainty calculations |
+| Confidence calculations | TypeScript | Statistical computations |
+| Save rankings | SQL | Simple insert/upsert |
+
+---
+
+### **Architecture Pattern**
+
+```
+┌─────────────────────────────────────────┐
+│         TypeScript Layer                │
+│  (Algorithms, Business Logic)           │
+│                                         │
+│  • Bradley-Terry MM Algorithm          │
+│  • Pair Selection Strategy              │
+│  • Confidence Calculations             │
+│  • Progress Tracking                    │
+└──────────────┬──────────────────────────┘
+               │
+               │ Calls
+               │
+┌──────────────▼──────────────────────────┐
+│      Supabase Client Library            │
+│      (TypeScript Wrapper)               │
+└──────────────┬──────────────────────────┘
+               │
+               │ Translates to
+               │
+┌──────────────▼──────────────────────────┐
+│         SQL Layer                       │
+│  (Data Operations)                      │
+│                                         │
+│  • SELECT queries                       │
+│  • Aggregations (COUNT, SUM, etc.)      │
+│  • Views for common queries             │
+│  • INSERT/UPDATE operations             │
+└─────────────────────────────────────────┘
+```
+
+---
+
+### **Implementation Guidelines**
+
+#### **1. Data Fetching (SQL via Supabase Client)**
+
+```typescript
+// ✅ GOOD: Use SQL for data aggregation
+const { data } = await supabase
+  .from('comparisons')
+  .select(`
+    item_a_id,
+    item_b_id,
+    preference,
+    count:comparisons.count()
+  `)
+  .eq('session_id', sessionId)
+  .group('item_a_id, item_b_id, preference')
+
+// ❌ BAD: Fetching all data to process in TypeScript
+const { data: allComparisons } = await supabase
+  .from('comparisons')
+  .select('*')
+  .eq('session_id', sessionId)
+// Then aggregating in TypeScript - inefficient
+```
+
+#### **2. Algorithm Implementation (TypeScript)**
+
+```typescript
+// ✅ GOOD: Complex algorithm in TypeScript
+function estimateBradleyTerryStrengths(
+  comparisons: ComparisonData[],
+  options: EstimationOptions
+): StrengthResult[] {
+  // MM algorithm implementation
+  // Iterative calculations
+  // Statistical computations
+}
+
+// ❌ BAD: Trying to implement MM algorithm in SQL
+// Too complex, hard to debug, inflexible
+```
+
+#### **3. Hybrid Flow Example**
+
+```typescript
+// Step 1: SQL - Fetch aggregated data
+async function getComparisonStats(sessionId: string) {
+  const { data } = await supabase
+    .from('comparisons')
+    .select(`
+      item_a_id,
+      item_b_id,
+      preference,
+      count:comparisons.count()
+    `)
+    .eq('session_id', sessionId)
+    .group('item_a_id, item_b_id, preference')
+  
+  return data
+}
+
+// Step 2: TypeScript - Run algorithm
+async function calculateRankings(sessionId: string) {
+  // Fetch data via SQL
+  const stats = await getComparisonStats(sessionId)
+  
+  // Process in TypeScript
+  const rankings = estimateBradleyTerryStrengths(stats, {
+    maxIterations: 100,
+    tolerance: 0.0001
+  })
+  
+  // Save results via SQL
+  await supabase
+    .from('rankings')
+    .upsert(rankings.map(r => ({
+      session_id: sessionId,
+      song_id: r.songId,
+      score: r.strength,
+      rank: r.rank,
+      confidence: r.confidence
+    })))
+  
+  return rankings
+}
+```
+
+---
+
+### **File Organization**
+
+```
+lib/
+├── supabase.ts              # Supabase client setup
+├── data/                    # SQL queries (via Supabase client)
+│   ├── comparisons.ts      # Comparison data queries
+│   ├── songs.ts            # Song catalog queries
+│   └── sessions.ts         # Session queries
+├── rankings/                # TypeScript algorithms
+│   ├── bradley-terry.ts    # MM algorithm implementation
+│   ├── pair-selection.ts   # Adaptive pair selection
+│   └── confidence.ts       # Confidence calculations
+└── utils/                   # Shared utilities
+```
+
+---
+
+### **When to Use SQL Views**
+
+Create SQL views for frequently-used query patterns:
+
+```sql
+-- View for comparison statistics
+CREATE VIEW comparison_stats AS
+SELECT 
+  session_id,
+  item_a_id,
+  item_b_id,
+  COUNT(*) FILTER (WHERE preference = 'A') as wins_a,
+  COUNT(*) FILTER (WHERE preference = 'B') as wins_b
+FROM comparisons
+GROUP BY session_id, item_a_id, item_b_id;
+```
+
+Then query the view:
+```typescript
+const { data } = await supabase
+  .from('comparison_stats')
+  .select('*')
+  .eq('session_id', sessionId)
+```
+
+---
+
+### **Performance Considerations**
+
+- **SQL**: Use for operations that benefit from database indexing and aggregation
+- **TypeScript**: Use for operations that require complex logic or iteration
+- **Data Transfer**: Minimize by aggregating in SQL before fetching
+- **Caching**: Consider caching computed rankings in database (rankings table)
+
+---
+
+### **Best Practices**
+
+1. ✅ **Aggregate in SQL**: Use GROUP BY, COUNT, SUM in SQL queries
+2. ✅ **Algorithm in TypeScript**: Keep complex logic in TypeScript
+3. ✅ **Type Safety**: Use TypeScript types for all data structures
+4. ✅ **Error Handling**: Check for errors after every Supabase operation
+5. ✅ **Views for Reuse**: Create SQL views for common query patterns
+6. ❌ **Avoid**: Complex iterative algorithms in SQL stored procedures
+7. ❌ **Avoid**: Fetching all data to process in TypeScript
+
+---
+
 ## 📝 **Development Notes**
 
 ### **Current Implementation**
@@ -400,4 +618,5 @@ The Bradley-Terry approach excels at:
 ---
 
 **Document Status**: ✅ **CURRENT** - Technical reference maintained  
+**Last Updated**: January 16, 2025  
 **Next Update**: When code architecture changes or new integrations added
