@@ -45,34 +45,36 @@ A web application for ranking and organizing music, built with Next.js and Supab
 
 ## 📚 Documentation
 
-This project maintains comprehensive documentation in three main documents:
+This project maintains **3 essential documents** in the `key_documentation/` folder:
 
 ### **Essential Documents**
 
-1. **[PROJECT_PLAN.md](./PROJECT_PLAN.md)** ⭐
+1. **[PROJECT_PLAN.md](./key_documentation/PROJECT_PLAN.md)** ⭐
    - Complete project roadmap and implementation status
    - Technical architecture and system design
    - Feature implementation details
    - Database schema and project structure
+   - **Update**: After major features, phase completion, or architectural changes
 
-2. **[DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md)** ⭐
+2. **[DEVELOPMENT_LOG.md](./key_documentation/DEVELOPMENT_LOG.md)** ⭐
    - Issues tracking and resolution
    - Planning history and key decisions
    - Validation results and testing outcomes
    - Lessons learned
+   - **Update**: After significant issues, decisions, or testing sessions
 
-3. **[TECHNICAL_REFERENCE.md](./TECHNICAL_REFERENCE.md)** ⭐
+3. **[TECHNICAL_REFERENCE.md](./key_documentation/TECHNICAL_REFERENCE.md)** ⭐
    - System architecture and code organization
    - API reference and integration guides
    - Development setup instructions
    - Code examples and patterns
+   - **Update**: When code logic changes, new services added, or technical details evolve
 
-### **Documentation Guide**
+### **Documentation Standards**
 
-See **[DOCUMENTATION_REQUIREMENTS.md](./DOCUMENTATION_REQUIREMENTS.md)** for:
-- Documentation standards and update workflow
-- When to update each document
-- Formatting guidelines and templates
+- **Update Frequency**: Keep documents current at every major development stage
+- **Format**: Use clear headings, status indicators (✅ 🚧 📋), and consistent structure
+- **Content**: Document all major work, decisions, and issues for future reference
 
 ---
 
