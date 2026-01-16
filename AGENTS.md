@@ -82,6 +82,21 @@ This file contains guidelines for agentic coding agents working in this reposito
 - `eslint.config.mjs` - ESLint with Next.js presets
 - `postcss.config.mjs` - PostCSS with Tailwind v4 plugin
 
+## Documentation
+
+This project maintains **3 essential documents** in `key_documentation/`:
+
+1. **PROJECT_PLAN.md** - Project roadmap, architecture, features, database schema
+   - Update: After major features, phase completion, or architectural changes
+
+2. **DEVELOPMENT_LOG.md** - Issues tracking, decisions, validation results, lessons learned
+   - Update: After significant issues (>15 min), decisions, or testing sessions
+
+3. **TECHNICAL_REFERENCE.md** - System architecture, code organization, API reference, setup
+   - Update: When code logic changes, new services added, or technical details evolve
+
+**Key Principle**: Update documents at every major development stage to maintain project continuity.
+
 ## When Working on This Codebase
 
 1. Always run `npm run lint` after changes
@@ -91,3 +106,4 @@ This file contains guidelines for agentic coding agents working in this reposito
 5. Keep components as server components unless interactivity is required
 6. Use the `@/*` path alias for clean imports
 7. Test both light and dark modes when adding UI components
+8. Update relevant documentation files when making significant changes

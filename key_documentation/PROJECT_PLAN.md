@@ -48,6 +48,12 @@ Song Ranker is an interactive web application that determines a user's personali
 
 ## 📅 **Development Timeline**
 
+Phases are organized by their overall development goals. Each category represents a major milestone in the project.
+
+---
+
+## 🏗️ **Category 1: Project Foundation**
+
 ### **Phase 0: Foundation & Setup** 🚧 **IN PROGRESS**
 **Date**: January 2025  
 **Status**: 🚧 In Progress
@@ -68,7 +74,126 @@ Song Ranker is an interactive web application that determines a user's personali
 - Design user interface for pairwise comparisons
 - Implement comparison flow with adaptive pair selection
 
-### **Phase 1: Core Functionality** 📋 **PLANNED**
+---
+
+## 🗄️ **Category 2: Database Implementation**
+
+### **Phase 1: Database Schema Design** 📋 **PLANNED**
+**Status**: 📋 Planned
+
+**Objective**: Design the database schema to support Bradley-Terry ranking algorithm
+
+**Deliverables**:
+- Review planned schema in PROJECT_PLAN.md
+- Decide on exact field types and sizes
+- Plan relationships between tables
+- Identify needed constraints
+- Identify needed indexes
+
+**Learning Focus**:
+- PostgreSQL data types (UUID, VARCHAR, TEXT, JSONB, ENUM, TIMESTAMP)
+- Table relationships and foreign keys
+- Schema design best practices
+
+---
+
+### **Phase 2: Database Table Creation** 📋 **PLANNED**
+**Status**: 📋 Planned
+
+**Objective**: Create all database tables with proper structure
+
+**Deliverables**:
+- CREATE TABLE for `songs`
+- CREATE TABLE for `sessions`
+- CREATE TABLE for `comparisons`
+- CREATE TABLE for `rankings`
+- Test each table creation in Supabase SQL Editor
+
+**Learning Focus**:
+- PostgreSQL CREATE TABLE syntax
+- Column definitions with types
+- Primary keys and foreign keys
+- Default values
+
+---
+
+### **Phase 3: Database Constraints & Indexes** 📋 **PLANNED**
+**Status**: 📋 Planned
+
+**Objective**: Add data integrity constraints and performance indexes
+
+**Deliverables**:
+- CHECK constraints (e.g., `item_a_id != item_b_id`)
+- UNIQUE constraints (prevent duplicate comparisons)
+- Foreign key constraints with appropriate ON DELETE behavior
+- Indexes on frequently queried columns
+- Composite indexes for multi-column queries
+
+**Learning Focus**:
+- Constraint types and when to use them
+- Index design for query performance
+- Balancing data integrity vs performance
+
+---
+
+### **Phase 4: Database Testing & Validation** 📋 **PLANNED**
+**Status**: 📋 Planned
+
+**Objective**: Test schema with sample data and validate design
+
+**Deliverables**:
+- Insert test songs
+- Create test session
+- Insert test comparisons
+- Test queries needed for application
+- Verify constraints work correctly
+- Validate foreign key relationships
+
+**Learning Focus**:
+- SQL INSERT statements
+- SQL SELECT queries
+- Testing data integrity
+- Query optimization
+
+---
+
+### **Phase 5: Database Views (Optional)** 📋 **OPTIONAL**
+**Status**: 📋 Optional
+
+**Objective**: Create useful views for common queries
+
+**Deliverables**:
+- `comparison_stats` view - aggregated comparison data
+- `session_progress` view - progress calculations
+- `song_comparison_counts` view - comparison frequency
+
+**Learning Focus**:
+- CREATE VIEW syntax
+- When views are useful vs direct queries
+- Querying views
+
+---
+
+### **Phase 6: Database Documentation** 📋 **PLANNED**
+**Status**: 📋 Planned
+
+**Objective**: Document final database schema
+
+**Deliverables**:
+- Update PROJECT_PLAN.md with final schema
+- Document table purposes and relationships
+- Document constraints and indexes
+- Note any design decisions or deviations
+
+**Learning Focus**:
+- Database documentation best practices
+- Schema versioning
+
+---
+
+## 🎯 **Category 3: Core Application Features**
+
+### **Phase 7: Core Functionality** 📋 **PLANNED**
 **Status**: 📋 Planned
 
 **Deliverables**:
@@ -78,7 +203,11 @@ Song Ranker is an interactive web application that determines a user's personali
 - Basic ranking algorithm implementation
 - Progress tracking
 
-### **Phase 2: Ranking & Completion** 📋 **PLANNED**
+---
+
+## 📊 **Category 4: Ranking System**
+
+### **Phase 8: Ranking & Completion** 📋 **PLANNED**
 **Status**: 📋 Planned
 
 **Deliverables**:
@@ -87,7 +216,11 @@ Song Ranker is an interactive web application that determines a user's personali
 - Completion conditions and confidence thresholds
 - Restart functionality
 
-### **Phase 3: Polish & Edge Cases** 📋 **PLANNED**
+---
+
+## ✨ **Category 5: Polish & Quality Assurance**
+
+### **Phase 9: Polish & Edge Cases** 📋 **PLANNED**
 **Status**: 📋 Planned
 
 **Deliverables**:
@@ -97,7 +230,11 @@ Song Ranker is an interactive web application that determines a user's personali
 - Mobile responsiveness
 - Error handling and recovery
 
-### **Phase 4: Stretch Goals** 📋 **OPTIONAL**
+---
+
+## 🚀 **Category 6: Future Enhancements**
+
+### **Phase 10: Stretch Goals** 📋 **OPTIONAL**
 **Status**: 📋 Optional
 
 **Deliverables**:
