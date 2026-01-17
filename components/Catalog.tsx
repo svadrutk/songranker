@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
 import { searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup } from "@/lib/api";
@@ -28,11 +28,12 @@ function LoadingSkeleton() {
 }
 
 interface CatalogProps {
-  onSelect: (release: ReleaseGroup | null, tracks: string[]) => void;
-  selectedId: string | null;
+  onToggle: (release: ReleaseGroup, tracks: string[]) => void;
+  onSearchStart?: () => void;
+  selectedIds: string[];
 }
 
-export function Catalog({ onSelect, selectedId }: CatalogProps) {
+export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ReleaseGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,7 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
     setLoading(true);
     setResults([]);
     setExpandedId(null);
+    onSearchStart?.();
     try {
       const data = await searchArtistReleaseGroups(query);
       setResults(data);
@@ -69,7 +71,6 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
   const filteredResults = useMemo(() => {
     return results.filter(release => {
       const type = release.type as ReleaseType;
-      // Handle "Other" specifically if needed, but usually it matches
       if (activeFilters.includes(type)) return true;
       if (activeFilters.includes("Other") && !["Album", "EP", "Single"].includes(type)) return true;
       return false;
@@ -77,9 +78,11 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
   }, [results, activeFilters]);
 
   const handleSelect = async (rg: ReleaseGroup) => {
-    if (selectedId !== rg.id) {
+    const isSelected = selectedIds.includes(rg.id);
+    
+    if (!isSelected) {
       // Step 1: Select it and start loading songs immediately
-      onSelect(rg, tracksCache[rg.id] || []);
+      onToggle(rg, tracksCache[rg.id] || []);
       setExpandedId(null);
 
       // Background fetch tracks if not in cache
@@ -90,7 +93,7 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
           trackList = await getReleaseGroupTracks(rg.id);
           setTracksCache((prev) => ({ ...prev, [rg.id]: trackList }));
           // Update the parent with the full tracklist once ready
-          onSelect(rg, trackList);
+          onToggle(rg, trackList);
         } catch (error) {
           console.error("Failed to fetch tracks:", error);
         } finally {
@@ -104,8 +107,14 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
     setExpandedId((prev) => (prev === rg.id ? null : rg.id));
   };
 
+  const handleRemove = (e: React.MouseEvent, rg: ReleaseGroup) => {
+    e.stopPropagation();
+    onToggle(rg, []);
+    if (expandedId === rg.id) setExpandedId(null);
+  };
+
   return (
-    <div className="flex flex-col h-full gap-6 overflow-hidden">
+    <div className="flex flex-col h-full gap-6 overflow-hidden relative">
       <div className="w-full">
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
@@ -115,16 +124,16 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search artist..."
-              className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
             />
           </div>
-          <Button type="submit" disabled={loading} className="px-5 h-10">
+          <Button type="submit" disabled={loading} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
           </Button>
         </form>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar pb-24">
         {loading ? (
           <div className="space-y-3">
             <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Catalog Loading...</h2>
@@ -153,7 +162,7 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
               </div>
             </div>
             {filteredResults.map((release) => {
-              const isSelected = selectedId === release.id;
+              const isSelected = selectedIds.includes(release.id);
               const isExpanded = expandedId === release.id;
               const hasTracks = !!tracksCache[release.id];
               const isLoading = loadingTracks[release.id];
@@ -204,6 +213,12 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
                         ) : (
                           <ChevronDown className="h-4 w-4" />
                         )}
+                        <button 
+                          onClick={(e) => handleRemove(e, release)}
+                          className="hover:text-destructive transition-colors ml-1 flex items-center justify-center"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -235,6 +250,16 @@ export function Catalog({ onSelect, selectedId }: CatalogProps) {
           </div>
         )}
       </div>
+
+      {selectedIds.length > 0 && (
+        <div className="absolute bottom-6 left-0 right-0 px-6 animate-in slide-in-from-bottom-4">
+          <Button className="w-full bg-green-500 hover:bg-green-600 text-black font-mono py-6 rounded-xl shadow-lg shadow-green-900/20 text-lg group flex items-center justify-center gap-2">
+            <Layers className="h-5 w-5 mr-2" />
+            READY TO RANK?
+            <span className="ml-1 px-2 py-0.5 bg-black/10 rounded-md text-xs">{selectedIds.length}</span>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

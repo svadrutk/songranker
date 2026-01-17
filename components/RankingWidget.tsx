@@ -5,17 +5,29 @@ import { type ReleaseGroup } from "@/lib/api";
 import { Music } from "lucide-react";
 
 interface RankingWidgetProps {
-  selectedRelease: ReleaseGroup | null;
+  selectedReleases: ReleaseGroup[];
+  allTracks: Record<string, string[]>;
 }
 
-export function RankingWidget({ selectedRelease }: RankingWidgetProps) {
+export function RankingWidget({ selectedReleases, allTracks }: RankingWidgetProps) {
+  const totalTracks = selectedReleases.reduce((sum, r) => sum + (allTracks[r.id]?.length || 0), 0);
+
   return (
     <div className="flex flex-col items-center justify-center h-full w-full gap-8">
-      {selectedRelease ? (
+      {selectedReleases.length > 0 ? (
         <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-300">
           <div className="text-center space-y-1">
-            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Currently Ranking</p>
-            <h2 className="text-xl font-mono font-bold">{selectedRelease.title}</h2>
+            <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
+              Currently Ranking {selectedReleases.length} Release{selectedReleases.length > 1 ? "s" : ""}
+            </p>
+            <h2 className="text-xl font-mono font-bold truncate max-w-lg">
+              {selectedReleases.length === 1 
+                ? selectedReleases[0].title 
+                : `${selectedReleases[0].title} + ${selectedReleases.length - 1} more`}
+            </h2>
+            <p className="text-[10px] font-mono text-muted-foreground uppercase">
+              {totalTracks} Total Tracks Loaded
+            </p>
           </div>
           
           <div className="flex items-center gap-6">
@@ -55,7 +67,7 @@ export function RankingWidget({ selectedRelease }: RankingWidgetProps) {
             </div>
             <div className="h-48 w-48 rounded-2xl border-2 border-dashed" />
           </div>
-          <p className="text-xs font-mono uppercase tracking-widest font-bold">Select an album to start ranking</p>
+          <p className="text-xs font-mono uppercase tracking-widest font-bold">Select albums to start ranking</p>
         </div>
       )}
     </div>
