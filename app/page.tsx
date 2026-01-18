@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Catalog } from "@/components/Catalog";
 import { RankingWidget } from "@/components/RankingWidget";
 import { type ReleaseGroup } from "@/lib/api";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function Home() {
+  const { user } = useAuth();
   const [selectedReleases, setSelectedReleases] = useState<ReleaseGroup[]>([]);
   const [allTracks, setAllTracks] = useState<Record<string, string[]>>({});
 
@@ -33,7 +35,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex h-screen w-full overflow-hidden bg-background">
+    <div key={user?.id || "guest"} className="flex h-full w-full overflow-hidden bg-background">
       {/* Left Panel: Catalog */}
       <div className="w-1/3 min-w-[320px] max-w-md border-r bg-muted/10 p-6 flex flex-col h-full">
         <Catalog 
@@ -50,6 +52,6 @@ export default function Home() {
           allTracks={allTracks}
         />
       </div>
-    </main>
+    </div>
   );
 }

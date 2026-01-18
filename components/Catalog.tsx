@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X } from "lucide-react";
+import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
 import { searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup } from "@/lib/api";
+import { useAuth } from "@/components/AuthProvider";
 
 type ReleaseType = "Album" | "EP" | "Single" | "Other";
 
@@ -34,6 +35,7 @@ interface CatalogProps {
 }
 
 export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) {
+  const { user, openAuthModal } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ReleaseGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,6 +47,11 @@ export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+
+    if (!user) {
+      openAuthModal("login");
+      return;
+    }
 
     setLoading(true);
     setResults([]);
@@ -82,6 +89,11 @@ export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) 
   }, [results, activeFilters]);
 
   const handleSelect = async (rg: ReleaseGroup) => {
+    if (!user) {
+      openAuthModal("login");
+      return;
+    }
+
     const isSelected = selectedIds.includes(rg.id);
     
     if (!isSelected) {
@@ -131,8 +143,17 @@ export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) 
               className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
             />
           </div>
-          <Button type="submit" disabled={loading} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+          <Button type="submit" disabled={loading} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono relative group">
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : !user ? (
+              <div className="flex items-center gap-2">
+                <Lock className="h-3 w-3" />
+                <span>Search</span>
+              </div>
+            ) : (
+              "Search"
+            )}
           </Button>
         </form>
       </div>
