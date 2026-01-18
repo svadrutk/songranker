@@ -29,9 +29,6 @@ Types:
 
 Use "!" after the type/scope for breaking changes (e.g., feat!: ...) and include "BREAKING CHANGE:" in the footer.
 
-Special mapping rules:
-- For anything in `packages/web`, use the `docs` type.
-- For anything in `packages/app`, use the `chore` type.
 
 Content guidelines:
 - Prefer explaining WHY something was done from an end-user perspective in the body.

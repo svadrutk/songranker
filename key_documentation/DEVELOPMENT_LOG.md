@@ -143,6 +143,25 @@ This section tracks **major architectural and strategic decisions** made during 
 - TypeScript used for what it's good at (algorithms, business logic)
 - Framework documented for consistent implementation
 
+### **Decision #6: Enhanced EP Detection and Filtering**
+**Date**: January 18, 2026  
+**Author**: opencode (Interactive Agent)
+
+**What Changed**:
+- Modified backend `spotify.py` to identify EPs based on track count (4-7) and title keywords
+- Updated frontend `Catalog.tsx` to include "EP" in default active filters
+- Improved robustness of release type categorization for Spotify-sourced data
+
+**Why**:
+- Spotify's API does not consistently tag EPs, leading to "empty" EP chips in the frontend
+- Users expect EPs to be visible by default alongside albums
+- Improved categorization ensures a better user experience when browsing artist catalogs
+
+**Impact**:
+- EPs are now correctly identified and displayed in the catalog
+- Higher visibility for EPs in search results
+- Resolved user-reported issue with the EP chip returning no results
+
 ---
 
 ## 🐛 **Issues Tracking**

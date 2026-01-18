@@ -28,6 +28,18 @@ Supabase (PostgreSQL Database)
 - **Styling**: Tailwind CSS for utility-first styling
 - **Type Safety**: TypeScript throughout
 
+### **Release Type Categorization (Spotify)**
+
+Since Spotify's API primarily returns `album`, `single`, and `compilation`, the backend implements custom logic to identify EPs and ensure consistent filtering in the frontend.
+
+**EP Detection Logic**:
+A release is categorized as an **EP** if any of the following are true:
+1.  Spotify explicitly returns the type as `"ep"`.
+2.  The `total_tracks` is between 4 and 7 (inclusive).
+3.  The title contains "EP" keywords (e.g., `" - EP"`, `" (EP)"`).
+
+Otherwise, the type is derived from Spotify's `album_type` (capitalized).
+
 ---
 
 ## 📁 **Code Organization**
