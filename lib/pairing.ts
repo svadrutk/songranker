@@ -2,7 +2,8 @@ import { type SessionSong } from "./api";
 
 /**
  * Pairs two songs for a duel.
- * Strategy: Pick a random song, then find the song with the closest Elo rating.
+ * Strategy: Pick a random song, then find songs with the closest Elo rating.
+ * To avoid repetitive pairings, we pick from the candidates with the smallest Elo difference.
  */
 export function getNextPair(songs: SessionSong[]): [SessionSong, SessionSong] | null {
   if (songs.length < 2) return null;
@@ -11,26 +12,22 @@ export function getNextPair(songs: SessionSong[]): [SessionSong, SessionSong] | 
   const indexA = Math.floor(Math.random() * songs.length);
   const songA = songs[indexA];
 
-  // Find the song with the closest Elo to songA (excluding songA itself)
-  let closestSongB: SessionSong | null = null;
-  let minDiff = Infinity;
+  // Calculate Elo differences for all other songs
+  const candidates = songs
+    .map((song, index) => ({
+      song,
+      index,
+      diff: Math.abs(song.local_elo - songA.local_elo),
+    }))
+    .filter((c) => c.index !== indexA)
+    .sort((a, b) => a.diff - b.diff);
 
-  for (let i = 0; i < songs.length; i++) {
-    if (i === indexA) continue;
-    
-    const diff = Math.abs(songs[i].local_elo - songA.local_elo);
-    if (diff < minDiff) {
-      minDiff = diff;
-      closestSongB = songs[i];
-    } else if (diff === minDiff) {
-      // Tie-breaker: random
-      if (Math.random() > 0.5) {
-        closestSongB = songs[i];
-      }
-    }
-  }
+  if (candidates.length === 0) return null;
 
-  if (!songA || !closestSongB) return null;
+  // Pick from the top 3 closest matches to add some variety while keeping matchups competitive
+  const poolSize = Math.min(3, candidates.length);
+  const randomIndex = Math.floor(Math.random() * poolSize);
+  const songB = candidates[randomIndex].song;
 
-  return [songA, closestSongB];
+  return [songA, songB];
 }

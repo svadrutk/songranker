@@ -1,20 +1,16 @@
 "use client";
 
-import { Music } from "lucide-react";
-import Image from "next/image";
 import { type SessionSong } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { CoverArt } from "@/components/CoverArt";
 
-interface RankingCardProps {
+type RankingCardProps = Readonly<{
   song: SessionSong;
   onClick: () => void;
   isActive?: boolean;
-}
+}>;
 
 export function RankingCard({ song, onClick, isActive }: RankingCardProps) {
-  const [imageError, setImageError] = useState(false);
-
   return (
     <button
       onClick={onClick}
@@ -27,21 +23,12 @@ export function RankingCard({ song, onClick, isActive }: RankingCardProps) {
     >
       {/* Artwork Section - Perfect Square */}
       <div className="relative aspect-square w-full bg-muted/30 flex items-center justify-center overflow-hidden border-b border-border/50">
-        {(song.cover_url || song.spotify_id) && !imageError ? (
-          <Image
-            src={song.cover_url || `https://i.scdn.co/image/${song.spotify_id}`}
-            alt={song.name}
-            fill
-            className="object-cover"
-            onError={() => setImageError(true)}
-            unoptimized
-          />
-        ) : (
-          <>
-            <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,_var(--primary)_0%,_transparent_70%)] group-hover:opacity-10 transition-opacity" />
-            <Music className="h-16 w-16 text-muted-foreground/20 group-hover:text-primary/20 transition-colors duration-500" />
-          </>
-        )}
+        <CoverArt
+          title={song.name}
+          url={song.cover_url}
+          spotifyId={song.spotify_id}
+          className="w-full h-full"
+        />
       </div>
 
       {/* Info Section */}
@@ -57,12 +44,14 @@ export function RankingCard({ song, onClick, isActive }: RankingCardProps) {
 
         <div className="flex items-end justify-between mt-4">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest font-black">Album</span>
+            <span className="text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest font-black">
+              Album
+            </span>
             <span className="text-[10px] font-mono font-bold line-clamp-1 opacity-60 group-hover:opacity-100 transition-opacity">
               {song.album || "Unknown Release"}
             </span>
           </div>
-          
+
           <div className="h-8 w-8 rounded-full border border-primary/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-4 group-hover:translate-x-0">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_var(--primary)]" />
           </div>

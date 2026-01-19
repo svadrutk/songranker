@@ -1,45 +1,45 @@
 "use server";
 
-export interface CoverArtArchive {
+export type CoverArtArchive = {
   artwork: boolean | null;
   back: boolean | null;
   count: number | null;
   darkened: boolean | null;
   front: boolean | null;
   url?: string;
-}
+};
 
-export interface ReleaseGroup {
+export type ReleaseGroup = {
   id: string; // Release Group MBID or Last.fm ID
   title: string;
   artist?: string;
   type: string;
   cover_art?: CoverArtArchive;
-}
+};
 
-export interface SongInput {
+export type SongInput = {
   name: string;
   artist: string;
   album?: string | null;
   spotify_id?: string | null;
   cover_url?: string | null;
-}
+};
 
-export interface SessionCreate {
+export type SessionCreate = {
   user_id?: string | null;
   songs: SongInput[];
-}
+};
 
-export interface SessionResponse {
+export type SessionResponse = {
   session_id: string;
   count: number;
-}
+};
 
-export interface TrackResponse {
+export type TrackResponse = {
   tracks: string[];
-}
+};
 
-export interface SessionSong {
+export type SessionSong = {
   song_id: string;
   name: string;
   artist: string;
@@ -48,20 +48,20 @@ export interface SessionSong {
   cover_url: string | null;
   local_elo: number;
   bt_strength: number | null;
-}
+};
 
-export interface ComparisonCreate {
+export type ComparisonCreate = {
   song_a_id: string;
   song_b_id: string;
   winner_id: string | null;
   is_tie: boolean;
-}
+};
 
-export interface ComparisonResponse {
+export type ComparisonResponse = {
   success: boolean;
   new_elo_a: number;
   new_elo_b: number;
-}
+};
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
@@ -70,9 +70,9 @@ export async function searchArtistReleaseGroups(query: string): Promise<ReleaseG
 
   try {
     const response = await fetch(`${BACKEND_URL}/search?query=${encodeURIComponent(query)}`, {
-      cache: 'no-store'
+      cache: "no-store",
     });
-    
+
     if (!response.ok) {
       throw new Error(`Backend error: ${response.statusText}`);
     }
@@ -89,9 +89,9 @@ export async function getReleaseGroupTracks(id: string): Promise<string[]> {
 
   try {
     const response = await fetch(`${BACKEND_URL}/tracks/${id}`, {
-      cache: 'no-store'
+      cache: "no-store",
     });
-    
+
     if (!response.ok) {
       throw new Error(`Backend error: ${response.statusText}`);
     }
@@ -107,9 +107,9 @@ export async function getReleaseGroupTracks(id: string): Promise<string[]> {
 export async function createSession(payload: SessionCreate): Promise<SessionResponse> {
   try {
     const response = await fetch(`${BACKEND_URL}/sessions`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
@@ -130,7 +130,7 @@ export async function createSession(payload: SessionCreate): Promise<SessionResp
 export async function getSessionSongs(sessionId: string): Promise<SessionSong[]> {
   try {
     const response = await fetch(`${BACKEND_URL}/sessions/${sessionId}/songs`, {
-      cache: 'no-store'
+      cache: "no-store",
     });
 
     if (!response.ok) {
@@ -144,12 +144,15 @@ export async function getSessionSongs(sessionId: string): Promise<SessionSong[]>
   }
 }
 
-export async function createComparison(sessionId: string, payload: ComparisonCreate): Promise<ComparisonResponse> {
+export async function createComparison(
+  sessionId: string,
+  payload: ComparisonCreate
+): Promise<ComparisonResponse> {
   try {
     const response = await fetch(`${BACKEND_URL}/sessions/${sessionId}/comparisons`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
@@ -165,3 +168,4 @@ export async function createComparison(sessionId: string, payload: ComparisonCre
     throw error;
   }
 }
+
