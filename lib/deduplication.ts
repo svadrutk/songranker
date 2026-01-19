@@ -186,7 +186,8 @@ export function prepareSongInputs(
       songInputsMap.set(key, {
         name,
         artist,
-        album: release?.title || null
+        album: release?.title || null,
+        cover_url: release?.cover_art?.url || null
       });
     }
   }

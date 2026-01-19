@@ -22,6 +22,7 @@ export interface SongInput {
   artist: string;
   album?: string | null;
   spotify_id?: string | null;
+  cover_url?: string | null;
 }
 
 export interface SessionCreate {
@@ -44,6 +45,7 @@ export interface SessionSong {
   artist: string;
   album: string | null;
   spotify_id: string | null;
+  cover_url: string | null;
   local_elo: number;
   bt_strength: number | null;
 }
