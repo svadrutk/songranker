@@ -198,12 +198,13 @@ export function RankingWidget({
 
                   {index === 0 && (
                     <div className="flex flex-col gap-6 items-center shrink-0">
-                      <div className="relative group">
-                        <div className="h-14 w-14 rounded-full border-2 border-primary/30 flex items-center justify-center bg-background/80 backdrop-blur-xl relative z-10 shadow-2xl">
-                          <span className="text-sm font-mono font-black text-primary italic">VS</span>
+                      <div className="relative">
+                        {/* Simple Emphasized VS Circle */}
+                        <div className="h-16 w-16 rounded-full border-[3px] border-primary flex items-center justify-center bg-background shadow-lg relative z-10">
+                          <span className="text-lg font-mono font-black text-primary select-none">
+                            VS
+                          </span>
                         </div>
-                        <div className="absolute inset-[-4px] rounded-full border border-primary/10 animate-pulse" />
-                        <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
                       </div>
 
                       <div className="flex flex-col gap-4">
