@@ -7,6 +7,30 @@
 
 ## 📋 **Decision Log**
 
+### **Decision #12: Seamless Bradley-Terry Integration & Convergence Progress**
+**Date**: January 19, 2026
+**Author**: opencode (Interactive Agent)
+
+**What Changed**:
+- **API Synchronization**: Updated `ComparisonResponse` and `SessionDetail` in `lib/api.ts` to include `convergence_score` and `sync_queued` flags.
+- **Progress Tracking**: Added an elegant, animated progress bar to `RankingWidget.tsx` that reflects the model's convergence percentage (0-100%).
+- **Seamless Sync**: Implemented background synchronization that triggers after a duel if the backend signals a "sync queued" (Bradley-Terry recalculation). The UI updates local strengths and Elos without blocking the user.
+- **Finish Session Flow**: Introduced a "View Results" button that appears automatically once the ranking reaches a stability threshold (90% convergence).
+- **Interactive Leaderboard**: Created a `Leaderboard` view sorted by `bt_strength` (Bradley-Terry strength) with a "Keep Ranking" option for further refinement.
+
+**Why**:
+- **Transparency**: Users need to know how close they are to a "definitive" ranking to stay motivated.
+- **Accuracy**: Syncing with the backend's Bradley-Terry model ensures the frontend's local Elo eventually aligns with the more sophisticated statistical model.
+- **Performance**: Background syncing prevents expensive mathematical calculations from blocking the snappy 60fps UI.
+- **UX**: Providing a clear "Finish Line" gives the session a sense of completion while allowing for infinite refinement.
+
+**Impact**:
+- Unified the frontend pairing logic with the backend's statistical engine.
+- Added a professional "progress" feel to the ranking process.
+- Improved the "Top 10" stability perception through real-time feedback.
+
+---
+
 ### **Decision #11: VS Button Refinement & Centering Fix**
 **Date**: January 19, 2026
 **Author**: opencode (Interactive Agent)

@@ -1,8 +1,8 @@
 # Song Ranker - Technical Reference
 
-**Last Updated**: January 18, 2026  
+**Last Updated**: January 19, 2026  
 **Purpose**: Complete technical documentation for developers  
-**Status**: ✅ **ACTIVE** - Phase 3 Complete
+**Status**: ✅ **ACTIVE** - Phase 4 Integration Complete
 
 ---
 
@@ -69,9 +69,9 @@ Song Ranker/
 **Key Operations**:
 - `createSession(payload)`: Initialize a new ranking session.
 - `getUserSessions(userId)`: List all past sessions for a user, including comparison counts.
-- `getSessionDetail(sessionId)`: Fetch full session metadata, songs, and total decisions made.
+- `getSessionDetail(sessionId)`: Fetch full session metadata, songs, total decisions made, and **convergence score**.
 - `deleteSession(sessionId)`: Permanently remove a session and all associated data.
-- `createComparison(sessionId, payload)`: Record a duel result and sync with backend.
+- `createComparison(sessionId, payload)`: Record a duel result. Returns updated Elos, **convergence score**, and a **sync_queued** flag for background updates.
 
 **API Reference**:
 
@@ -418,6 +418,17 @@ The Bradley-Terry approach excels at:
 
 ---
 
+### **Seamless Sync Architecture**
+
+To maintain a high-performance UI while utilizing sophisticated backend ranking models, the application uses a "Seamless Sync" pattern.
+
+1.  **Optimistic Frontend**: Every duel choice immediately updates a local Elo rating ($K=32$) for instant visual feedback.
+2.  **Background Reconciliation**: After every 10 duels (or when the backend worker finishes a cycle), the `createComparison` API returns `sync_queued: true`.
+3.  **Silent Refresh**: The frontend waits 1 second for worker overhead and then fetches `getSessionDetail` in the background.
+4.  **State Merge**: The local `songs` state is updated with official `bt_strength` and `local_elo` from the backend, ensuring the frontend never drifts far from the "source of truth."
+
+---
+
 ## 🔄 **Hybrid SQL/TypeScript Framework**
 
 This project uses a hybrid approach: **SQL for data operations, TypeScript for algorithms**. This framework balances performance, maintainability, and development speed.
@@ -654,5 +665,5 @@ const { data } = await supabase
 ---
 
 **Document Status**: ✅ **CURRENT** - Technical reference maintained  
-**Last Updated**: January 16, 2025  
+**Last Updated**: January 19, 2026  
 **Next Update**: When code architecture changes or new integrations added

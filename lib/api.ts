@@ -47,6 +47,15 @@ export type SessionDetail = {
   session_id: string;
   songs: SessionSong[];
   comparison_count: number;
+  convergence_score?: number;
+};
+
+export type ComparisonResponse = {
+  success: boolean;
+  new_elo_a: number;
+  new_elo_b: number;
+  sync_queued: boolean;
+  convergence_score?: number;
 };
 
 export type TrackResponse = {
@@ -69,12 +78,6 @@ export type ComparisonCreate = {
   song_b_id: string;
   winner_id: string | null;
   is_tie: boolean;
-};
-
-export type ComparisonResponse = {
-  success: boolean;
-  new_elo_a: number;
-  new_elo_b: number;
 };
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
