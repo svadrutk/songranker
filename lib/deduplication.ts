@@ -183,11 +183,15 @@ export function prepareSongInputs(
     const existing = songInputsMap.get(key);
     // If we haven't seen this song, or if the current name is shorter (more canonical)
     if (!existing || name.length < existing.name.length) {
+      // Generate a fallback URL if cover_art.url is missing but we have a release ID
+      const cover_url = release?.cover_art?.url || (release?.id ? `https://coverartarchive.org/release-group/${release.id}/front-250` : null);
+
       songInputsMap.set(key, {
         name,
         artist,
         album: release?.title || null,
-        cover_url: release?.cover_art?.url || null
+        cover_url: cover_url,
+        spotify_id: null // Backend handles resolution, but we can pass null
       });
     }
   }

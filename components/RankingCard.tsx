@@ -27,7 +27,7 @@ export function RankingCard({ song, onClick, isActive }: RankingCardProps) {
     >
       {/* Artwork Section */}
       <div className="relative h-48 w-full bg-muted/30 flex items-center justify-center overflow-hidden border-b">
-        {song.cover_url && !imageError ? (
+        {song.cover_url && song.cover_url !== "null" && !imageError ? (
           <Image
             src={song.cover_url}
             alt={song.name}
