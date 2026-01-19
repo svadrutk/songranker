@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Catalog } from "@/components/Catalog";
 import { RankingWidget } from "@/components/RankingWidget";
-import { createSession, type ReleaseGroup, type SongInput } from "@/lib/api";
+import { createSession, type ReleaseGroup } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { DeduplicationModal } from "@/components/DeduplicationModal";
-import { findPotentialDuplicates, filterTracks, type DuplicateGroup } from "@/lib/deduplication";
+import { findPotentialDuplicates, filterTracks, type DuplicateGroup, prepareSongInputs } from "@/lib/deduplication";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -51,14 +51,7 @@ export default function Home() {
     setIsCreatingSession(true);
     setError(null);
     
-    const songInputs: SongInput[] = songs.map(name => {
-      const release = selectedReleases.find(r => allTracks[r.id]?.includes(name));
-      return {
-        name,
-        artist: release?.artist || "Unknown Artist",
-        album: release?.title || null
-      };
-    });
+    const songInputs = prepareSongInputs(songs, selectedReleases, allTracks);
 
     try {
       const session = await createSession({
@@ -68,9 +61,7 @@ export default function Home() {
       setSessionId(session.session_id);
       setView("ranking");
     } catch (err) {
-      console.error("Session creation error:", err);
       setError(err instanceof Error ? err.message : "Failed to initialize ranking session");
-      // Stay in current view (catalog or dedupe) so user can try again
     } finally {
       setIsCreatingSession(false);
     }

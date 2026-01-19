@@ -1,26 +1,15 @@
+import type { ReleaseGroup, SongInput } from "./api";
+
 /**
  * Utility for normalizing song titles and identifying potential duplicates.
  */
 
 const SUFFIXES_REGEX = new RegExp(
   [
-    "\\(instrumental\\)",
-    "\\(a capella\\)",
-    "\\(acapella\\)",
-    "\\(live.*\\)",
-    "\\(demo.*\\)",
-    "\\(remastered.*\\)",
-    "\\[remastered.*\\]",
-    "\\(edit.*\\)",
-    "\\(version.*\\)",
-    "\\(feat\\..*\\)",
-    "\\(with.*\\)",
-    "- instrumental",
-    "- live",
-    "- demo",
-    "- remastered",
-    "- [0-9]{4} remaster",
-    "\\([0-9]{4} remaster\\)",
+    // Parenthetical or bracketed suffixes
+    "\\s*[\\(\\[](instrumental|acapella|a capp?ella|live|demo|remastered|edit|version|feat\\.|with|remix|extended|acoustic|[0-9]{4}\\s*remaster).*?[\\)\\]]",
+    // Hyphenated suffixes
+    "\\s*-\\s*(instrumental|live|demo|remastered|extended|remix|acoustic|edit|radio\\s*edit|[0-9]{4}\\s*remaster).*",
   ].join("|"),
   "gi"
 );
@@ -172,4 +161,35 @@ export function findPotentialDuplicates(songs: string[]): DuplicateGroup[] {
   }
 
   return groups;
+}
+
+/**
+ * Maps raw song names to SongInput objects, deduplicating by normalized title and artist.
+ * Prefers the shortest name as the canonical version.
+ */
+export function prepareSongInputs(
+  songs: string[],
+  selectedReleases: ReleaseGroup[],
+  allTracks: Record<string, string[]>
+): SongInput[] {
+  const songInputsMap = new Map<string, SongInput>();
+
+  for (const name of songs) {
+    const release = selectedReleases.find(r => allTracks[r.id]?.includes(name));
+    const artist = release?.artist || "Unknown Artist";
+    const normalized = normalizeTitle(name);
+    const key = `${normalized}|${artist.toLowerCase().trim()}`;
+
+    const existing = songInputsMap.get(key);
+    // If we haven't seen this song, or if the current name is shorter (more canonical)
+    if (!existing || name.length < existing.name.length) {
+      songInputsMap.set(key, {
+        name,
+        artist,
+        album: release?.title || null
+      });
+    }
+  }
+
+  return Array.from(songInputsMap.values());
 }

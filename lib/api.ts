@@ -91,12 +91,13 @@ export async function createSession(payload: SessionCreate): Promise<SessionResp
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error("[API] Session creation failed:", errorData);
       throw new Error(errorData.detail || `Failed to create session: ${response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Error creating session:", error);
+    console.error("[API] Error in createSession:", error);
     throw error;
   }
 }
