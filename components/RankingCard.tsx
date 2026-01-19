@@ -32,7 +32,7 @@ export function RankingCard({ song, onClick, isActive }: RankingCardProps) {
             src={song.cover_url || `https://i.scdn.co/image/${song.spotify_id}`}
             alt={song.name}
             fill
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className="object-cover"
             onError={() => setImageError(true)}
             unoptimized
           />
@@ -42,9 +42,6 @@ export function RankingCard({ song, onClick, isActive }: RankingCardProps) {
             <Music className="h-16 w-16 text-muted-foreground/20 group-hover:text-primary/20 transition-colors duration-500" />
           </>
         )}
-
-        {/* Overlay Gradient for contrast */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </div>
 
       {/* Info Section */}
