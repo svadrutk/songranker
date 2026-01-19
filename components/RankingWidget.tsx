@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
 import { calculateNewRatings } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { RankingCard } from "@/components/RankingCard";
 
@@ -253,14 +253,6 @@ export function RankingWidget({
               Session Live • Awaiting Selection
             </p>
           </div>
-          
-          <Button 
-            variant="ghost" 
-            className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors gap-2 group"
-          >
-            <CheckCircle2 className="h-3 w-3 opacity-40 group-hover:opacity-100" />
-            Complete & View Leaderboard
-          </Button>
         </div>
       </div>
     </div>
