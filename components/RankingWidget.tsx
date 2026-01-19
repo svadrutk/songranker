@@ -9,8 +9,9 @@ import {
 } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
 import { calculateNewRatings } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy } from "lucide-react";
+import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { RankingCard } from "@/components/RankingCard";
 
 interface RankingWidgetProps {
   isRanking?: boolean;
@@ -66,7 +67,6 @@ export function RankingWidget({
     setTotalDuels(prev => prev + 1);
 
     // 2. Prepare next pair immediately for snappy UI
-    // We use the potentially updated ratings for the next pairing
     const updatedSongs = songs.map(s => {
       if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
       if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
@@ -84,8 +84,6 @@ export function RankingWidget({
       });
     } catch (error) {
       console.error("Failed to sync comparison:", error);
-      // Optional: Revert optimistic update on failure? 
-      // For now, let's keep it simple. The next refresh will fix it.
     }
   }, [currentPair, sessionId, songs]);
 
@@ -153,87 +151,94 @@ export function RankingWidget({
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full gap-8">
-      <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-300">
-        <div className="text-center space-y-1">
-          <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
-            {totalDuels === 0 ? "Starting Your Ranking Session" : `Duel #${totalDuels + 1}`}
-          </p>
-          <h2 className="text-xl font-mono font-bold truncate max-w-lg">
-            Which track do you prefer?
+      <div className="flex flex-col items-center gap-12 animate-in fade-in zoom-in duration-500">
+        {/* Header Section */}
+        <div className="text-center space-y-3 relative">
+          <div className="flex items-center justify-center gap-3 mb-1">
+             <div className="h-px w-8 bg-primary/20" />
+             <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
+               {totalDuels === 0 ? "Battle Phase" : `Duel Sequence #${totalDuels + 1}`}
+             </p>
+             <div className="h-px w-8 bg-primary/20" />
+          </div>
+          
+          <h2 className="text-3xl font-bold tracking-tight bg-linear-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Make Your Choice
           </h2>
-          <div className="flex items-center justify-center gap-4 text-[10px] font-mono text-muted-foreground uppercase">
-            <span>{songs.length} Tracks</span>
-            <span className="opacity-20">|</span>
-            <div className="flex items-center gap-1">
-              <Trophy className="h-3 w-3" />
-              <span>{totalDuels} Comparisons</span>
+          
+          <div className="flex items-center justify-center gap-6 text-[10px] font-mono text-muted-foreground/60 uppercase">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-border/50 bg-muted/20">
+              <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+              <span>{songs.length} Tracks Pool</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-border/50 bg-muted/20">
+              <Trophy className="h-3 w-3 text-primary/60" />
+              <span>{totalDuels} Decisions Made</span>
             </div>
           </div>
         </div>
         
-        {currentPair ? (
-          <div className="flex items-center gap-6">
-            <Button 
-              variant="outline" 
-              onClick={() => handleChoice(currentPair[0])}
-              className="h-64 w-64 rounded-2xl border-2 hover:border-primary/50 transition-all hover:bg-primary/5 group relative overflow-hidden flex flex-col items-center justify-center p-6 text-center gap-4"
-            >
-              <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-100 transition-opacity">
-                 <Music className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold leading-tight line-clamp-3">{currentPair[0].name}</span>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider line-clamp-1">{currentPair[0].artist}</span>
-              <div className="mt-auto pt-4 border-t w-full opacity-0 group-hover:opacity-40 transition-opacity">
-                <span className="text-[8px] font-mono uppercase">Rating: {Math.round(currentPair[0].local_elo)}</span>
-              </div>
-            </Button>
-            
-            <div className="flex flex-col gap-6">
-              <Button 
-                variant="outline" 
-                onClick={() => handleChoice(null, true)}
-                className="h-28 w-44 rounded-xl border-2 hover:border-primary/50 transition-all hover:bg-primary/5 group"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-mono uppercase tracking-widest font-bold">It&apos;s a Tie</span>
-                  <span className="text-[8px] opacity-40 font-mono uppercase">Equally Good</span>
+        {/* Duel Area */}
+        <div className="flex items-center gap-8 lg:gap-16">
+          {currentPair ? (
+            <>
+              <RankingCard 
+                song={currentPair[0]} 
+                onClick={() => handleChoice(currentPair[0])} 
+              />
+              
+              <div className="flex flex-col gap-4 items-center">
+                <div className="h-12 w-12 rounded-full border-2 border-primary/20 flex items-center justify-center bg-background/50 backdrop-blur-sm relative z-10 group">
+                  <span className="text-xs font-mono font-bold text-primary/40 group-hover:text-primary transition-colors">VS</span>
+                  <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
                 </div>
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPair(getNextPair(songs))}
-                className="h-28 w-44 rounded-xl border-2 hover:border-primary/50 transition-all hover:bg-primary/5 group"
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Skip</span>
-                  <span className="text-[8px] opacity-40 font-mono uppercase">Can&apos;t Decide</span>
+                
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleChoice(null, true)}
+                    className="h-12 w-32 rounded-xl border-border/50 hover:border-primary/50 transition-all bg-muted/20 hover:bg-primary/5 group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Scale className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Tie</span>
+                    </div>
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={() => setCurrentPair(getNextPair(songs))}
+                    className="h-12 w-32 rounded-xl border-border/50 hover:border-primary/50 transition-all bg-muted/20 hover:bg-primary/5 group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RotateCcw className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-[10px] font-mono uppercase tracking-widest font-bold">Skip</span>
+                    </div>
+                  </Button>
                 </div>
-              </Button>
+              </div>
+              
+              <RankingCard 
+                song={currentPair[1]} 
+                onClick={() => handleChoice(currentPair[1])} 
+              />
+            </>
+          ) : (
+            <div className="h-80 w-[40rem] flex flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-primary/10 bg-primary/[0.02]">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/40" />
+              <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground animate-pulse">
+                Recalibrating Pairing Matrix...
+              </p>
             </div>
-            
-            <Button 
-              variant="outline" 
-              onClick={() => handleChoice(currentPair[1])}
-              className="h-64 w-64 rounded-2xl border-2 hover:border-primary/50 transition-all hover:bg-primary/5 group relative overflow-hidden flex flex-col items-center justify-center p-6 text-center gap-4"
-            >
-              <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-100 transition-opacity">
-                 <Music className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-bold leading-tight line-clamp-3">{currentPair[1].name}</span>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider line-clamp-1">{currentPair[1].artist}</span>
-              <div className="mt-auto pt-4 border-t w-full opacity-0 group-hover:opacity-40 transition-opacity">
-                <span className="text-[8px] font-mono uppercase">Rating: {Math.round(currentPair[1].local_elo)}</span>
-              </div>
-            </Button>
-          </div>
-        ) : (
-          <div className="h-64 flex flex-col items-center justify-center gap-4 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin" />
-            <p className="text-xs font-mono uppercase">Finding next pairing...</p>
-          </div>
-        )}
+          )}
+        </div>
         
-        <p className="text-xs text-muted-foreground font-mono">Select the song that is better</p>
+        {/* Footer/Progress */}
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-[10px] text-muted-foreground/40 font-mono uppercase tracking-[0.3em] animate-pulse">
+            Session active • Awaiting input
+          </p>
+        </div>
       </div>
     </div>
   );
