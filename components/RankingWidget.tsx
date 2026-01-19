@@ -10,9 +10,10 @@ interface RankingWidgetProps {
   allTracks: Record<string, string[]>;
   isRanking?: boolean;
   finalSongList?: string[];
+  sessionId?: string | null;
 }
 
-export function RankingWidget({ selectedReleases, allTracks, isRanking, finalSongList }: RankingWidgetProps) {
+export function RankingWidget({ selectedReleases, allTracks, isRanking, finalSongList, sessionId }: RankingWidgetProps) {
   const { user, openAuthModal } = useAuth();
   const totalTracks = selectedReleases.reduce((sum, r) => sum + (allTracks[r.id]?.length || 0), 0);
 
@@ -32,6 +33,11 @@ export function RankingWidget({ selectedReleases, allTracks, isRanking, finalSon
             <p className="text-[10px] font-mono text-muted-foreground uppercase">
               {isRanking ? `${finalSongList?.length} Unique Tracks Ready` : `${totalTracks} Total Tracks Loaded`}
             </p>
+            {sessionId && (
+              <p className="text-[8px] font-mono text-muted-foreground/40 uppercase tracking-tighter">
+                Session: {sessionId}
+              </p>
+            )}
           </div>
           
           <div className="flex items-center gap-6">

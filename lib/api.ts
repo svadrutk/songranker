@@ -12,8 +12,26 @@ export interface CoverArtArchive {
 export interface ReleaseGroup {
   id: string; // Release Group MBID or Last.fm ID
   title: string;
+  artist?: string;
   type: string;
   cover_art?: CoverArtArchive;
+}
+
+export interface SongInput {
+  name: string;
+  artist: string;
+  album?: string | null;
+  spotify_id?: string | null;
+}
+
+export interface SessionCreate {
+  user_id?: string | null;
+  songs: SongInput[];
+}
+
+export interface SessionResponse {
+  session_id: string;
+  count: number;
 }
 
 export interface TrackResponse {
@@ -58,5 +76,27 @@ export async function getReleaseGroupTracks(id: string): Promise<string[]> {
   } catch (error) {
     console.error("Error fetching tracks:", error);
     return [];
+  }
+}
+
+export async function createSession(payload: SessionCreate): Promise<SessionResponse> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Failed to create session: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating session:", error);
+    throw error;
   }
 }
