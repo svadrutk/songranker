@@ -19,38 +19,39 @@ export function Navbar() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           {user ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <div className="hidden sm:flex flex-col items-end">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Logged In As</span>
                 <span className="text-xs font-mono font-medium">{user.email}</span>
               </div>
-              <div className="h-8 w-[1px] bg-border mx-2 hidden sm:block" />
+              <div className="h-8 w-[1px] bg-border mx-1 md:mx-2 hidden sm:block" />
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => signOut()}
-                className="font-mono text-[10px] uppercase font-bold tracking-widest hover:text-destructive"
+                className="font-mono text-[9px] md:text-[10px] uppercase font-bold tracking-widest hover:text-destructive px-2 md:px-3"
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                <LogOut className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden xs:inline">Logout</span>
+                <span className="xs:hidden">Out</span>
               </Button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => openAuthModal("login")}
-                className="font-mono text-[10px] uppercase font-bold tracking-widest"
+                className="font-mono text-[9px] md:text-[10px] uppercase font-bold tracking-widest px-2 md:px-4"
               >
                 Login
               </Button>
               <Button 
                 size="sm" 
                 onClick={() => openAuthModal("signup")}
-                className="font-mono text-[10px] uppercase font-bold tracking-widest"
+                className="font-mono text-[9px] md:text-[10px] uppercase font-bold tracking-widest px-2 md:px-4"
               >
                 Sign Up
               </Button>

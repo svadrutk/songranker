@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 
 type SessionSelectorProps = Readonly<{
   onSelect: (sessionId: string) => void;
@@ -176,11 +177,20 @@ function DeleteConfirmationModal({
   onClose, 
   onConfirm, 
   artistName 
-}: DeleteConfirmationModalProps): JSX.Element {
-  return (
+}: DeleteConfirmationModalProps): JSX.Element | null {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -236,6 +246,8 @@ function DeleteConfirmationModal({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
+

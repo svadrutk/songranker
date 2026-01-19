@@ -69,9 +69,9 @@ Song Ranker/
 **Key Operations**:
 - `createSession(payload)`: Initialize a new ranking session.
 - `getUserSessions(userId)`: List all past sessions for a user, including comparison counts.
-- `getSessionDetail(sessionId)`: Fetch full session metadata, songs, total decisions made, and **convergence score**.
+- `getSessionDetail(sessionId)`: Fetch full session metadata, songs, total decisions made, and **convergence (0-100)**.
 - `deleteSession(sessionId)`: Permanently remove a session and all associated data.
-- `createComparison(sessionId, payload)`: Record a duel result. Returns updated Elos, **convergence score**, and a **sync_queued** flag for background updates.
+- `createComparison(sessionId, payload)`: Record a duel result. Returns updated Elos, **convergence**, and a **sync_queued** flag for background updates.
 
 **API Reference**:
 

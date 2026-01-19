@@ -12,17 +12,17 @@
 **Author**: opencode (Interactive Agent)
 
 **What Changed**:
-- **API Synchronization**: Updated `ComparisonResponse` and `SessionDetail` in `lib/api.ts` to include `convergence_score` and `sync_queued` flags.
-- **Progress Tracking**: Added an elegant, animated progress bar to `RankingWidget.tsx` that reflects the model's convergence percentage (0-100%).
-- **Seamless Sync**: Implemented background synchronization that triggers after a duel if the backend signals a "sync queued" (Bradley-Terry recalculation). The UI updates local strengths and Elos without blocking the user.
+- **API Synchronization**: Standardized all API responses and types on the `convergence` field (integer 0-100).
+- **Progress Tracking**: Added an elegant, animated progress bar to `RankingWidget.tsx` that reflects the model's convergence percentage.
+- **Seamless Sync**: Implemented background synchronization that triggers after every 10 duels. The UI performs a "silent merge" that updates Bradley-Terry strengths for the pool while preserving the local Elo state for the active pair to avoid visual disruption.
 - **Finish Session Flow**: Introduced a "View Results" button that appears automatically once the ranking reaches a stability threshold (90% convergence).
-- **Interactive Leaderboard**: Created a `Leaderboard` view sorted by `bt_strength` (Bradley-Terry strength) with a "Keep Ranking" option for further refinement.
+- **Interactive Leaderboard**: Created a `Leaderboard` view sorted by `bt_strength` with an Elo-based fallback for early sessions.
 
 **Why**:
-- **Transparency**: Users need to know how close they are to a "definitive" ranking to stay motivated.
-- **Accuracy**: Syncing with the backend's Bradley-Terry model ensures the frontend's local Elo eventually aligns with the more sophisticated statistical model.
-- **Performance**: Background syncing prevents expensive mathematical calculations from blocking the snappy 60fps UI.
-- **UX**: Providing a clear "Finish Line" gives the session a sense of completion while allowing for infinite refinement.
+- **Transparency**: Users need to know how close they are to a "definitive" ranking.
+- **Data Integrity**: The merge strategy ensures that optimistic local choices are never "erased" by delayed background worker updates.
+- **Stability**: Background syncing prevents expensive calculations from blocking the UI, while explicit `isMounted` checks prevent errors during navigation.
+- **UX**: Eliminating the redundant `setCurrentPair` call in the sync logic prevents the song pair from suddenly "swapping" while the user is making a choice.
 
 **Impact**:
 - Unified the frontend pairing logic with the backend's statistical engine.

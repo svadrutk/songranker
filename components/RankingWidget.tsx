@@ -40,16 +40,11 @@ export function RankingWidget({
     };
   }, []);
   
-  // 1. Calculate optimistic progress based on duel count (covers at least the 40% quantity weight)
-  // We make it move at least 1% per duel initially to show life
   const quantityTarget = Math.max(1, songs.length * 1.5);
   const quantityProgress = Math.min(100, (totalDuels / quantityTarget) * 100);
   const optimisticMin = Math.min(40, quantityProgress);
-
-  // 2. Final display score (monotonic update)
   const displayScore = Math.max(convergence, optimisticMin);
 
-  // Initial load of songs
   useEffect(() => {
     if (!isRanking || !sessionId) return;
 
@@ -81,18 +76,14 @@ export function RankingWidget({
       const [songA, songB] = currentPair;
       const wId = winner?.song_id || null;
 
-      // 1. Trigger Animation
       setWinnerId(wId);
       setIsTie(tie);
 
-      // 2. Wait for animation to finish
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // 3. Calculate new ratings
       const scoreA = tie ? 0.5 : wId === songA.song_id ? 1 : 0;
       const [newEloA, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, scoreA);
 
-      // 4. Update & Prepare next pair
       setSongs((prevSongs) => {
         const updated = prevSongs.map((s) => {
           if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
@@ -108,7 +99,6 @@ export function RankingWidget({
       setWinnerId(null);
       setIsTie(false);
 
-      // 5. Sync with Backend
       try {
         const response = await createComparison(sessionId, {
           song_a_id: songA.song_id,
@@ -124,18 +114,14 @@ export function RankingWidget({
           }
 
           if (response.sync_queued) {
-            // Background sync for Bradley-Terry updates
             const syncData = async () => {
               if (!isMounted.current) return;
               try {
                 const detail = await getSessionDetail(sessionId);
                 if (detail && isMounted.current) {
-                  // Merge strategy: Update strengths but preserve local Elos for current pair
                   if (detail.songs && detail.songs.length > 0) {
                     setSongs(prevSongs => {
                       return detail.songs.map(backendSong => {
-                        // If this song is in the current active duel, trust local Elo more
-                        // since the backend might not have processed the latest choice yet
                         const isCurrent = currentPair.some(p => p.song_id === backendSong.song_id);
                         if (isCurrent) {
                           const local = prevSongs.find(s => s.song_id === backendSong.song_id);
@@ -155,7 +141,6 @@ export function RankingWidget({
               }
             };
 
-            // Staggered syncs to catch worker updates
             setTimeout(syncData, 1000);
             setTimeout(syncData, 4000);
           }
@@ -222,49 +207,49 @@ export function RankingWidget({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full gap-8 max-w-7xl mx-auto">
-      <div className="flex flex-col items-center gap-10 animate-in fade-in zoom-in duration-700 w-full">
+    <div className="flex flex-col h-full w-full max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <div className="flex flex-col items-center gap-4 md:gap-6 lg:gap-8 animate-in fade-in zoom-in duration-700 w-full h-full">
         {/* Header Section */}
-        <div className="text-center space-y-4 relative">
-          <div className="flex items-center justify-center gap-4 mb-2">
-            <div className="h-[2px] w-12 bg-primary/20 rounded-full" />
-            <p className="text-[11px] font-black text-primary uppercase tracking-[0.3em] font-mono">
+        <div className="text-center space-y-1.5 md:space-y-3 relative shrink-0">
+          <div className="hidden md:flex items-center justify-center gap-3 mb-0 md:mb-1">
+            <div className="h-[1px] md:h-[2px] w-6 md:w-12 bg-primary/20 rounded-full" />
+            <p className="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-[0.2em] md:tracking-[0.3em] font-mono">
               {totalDuels === 0 ? "Initial Encounter" : `Duel #${totalDuels + 1}`}
             </p>
-            <div className="h-[2px] w-12 bg-primary/20 rounded-full" />
+            <div className="h-[1px] md:h-[2px] w-6 md:w-12 bg-primary/20 rounded-full" />
           </div>
 
-          <div className="relative inline-block">
+          <div className="relative inline-block mb-0.5 md:mb-0">
             <SpeedLines side="left" />
-            <h2 className="text-4xl font-black tracking-tighter uppercase italic px-4">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tighter uppercase italic px-4 leading-none">
               Make Your Choice
             </h2>
             <SpeedLines side="right" />
           </div>
 
-          <div className="flex items-center justify-center gap-8 text-[11px] font-mono text-muted-foreground/60 uppercase font-bold">
+          <div className="flex items-center justify-center gap-4 text-[9px] md:text-[11px] lg:text-xs font-mono text-muted-foreground/60 uppercase font-bold">
             <StatBadge 
-              icon={<div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />} 
-              label={`${songs.length} Tracks Pool`} 
+              icon={<div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-primary animate-pulse" />} 
+              label={`${songs.length} Tracks`} 
             />
             <StatBadge 
-              icon={<Trophy className="h-3.5 w-3.5 text-primary/60" />} 
-              label={`${totalDuels} Decisions`} 
+              icon={<Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary/60" />} 
+              label={`${totalDuels} Duels`} 
             />
           </div>
         </div>
 
         {/* Progress Section */}
-        <div className="w-full max-w-2xl space-y-3 px-4">
+        <div className="w-full max-w-xl space-y-1.5 md:space-y-2 lg:space-y-3 px-6 md:px-4 shrink-0">
           <div className="flex items-center justify-between px-1">
-             <p className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-primary/60">
+             <p className="text-[10px] md:text-[10px] font-mono font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-primary/60">
                {getConvergenceLabel(displayScore)}
              </p>
-             <p className="text-[10px] font-mono font-bold text-muted-foreground/40">
+             <p className="text-[10px] md:text-[10px] font-mono font-bold text-muted-foreground/40">
                {Math.round(displayScore)}%
              </p>
           </div>
-          <div className="h-1.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
+          <div className="h-1 lg:h-1.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
             <motion.div 
               className="h-full bg-primary"
               initial={{ width: 0 }}
@@ -279,11 +264,11 @@ export function RankingWidget({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="flex justify-center pt-2"
+                className="flex justify-center pt-4"
               >
                 <Button 
                   onClick={() => setIsFinished(true)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-widest text-[11px] font-black py-4 px-8 rounded-xl group"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-widest text-[10px] md:text-[11px] font-black py-3 md:py-4 px-6 md:px-8 rounded-xl group"
                 >
                   <Check className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                   View Results
@@ -294,11 +279,11 @@ export function RankingWidget({
         </div>
 
         {/* Duel Area */}
-        <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 w-full justify-center min-h-[32rem]">
+        <div className="flex-1 flex flex-col md:flex-row items-center gap-4 md:gap-12 lg:gap-16 w-full justify-center px-4">
           {!currentPair ? (
             <PairingLoader />
           ) : (
-            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 w-full justify-center">
+            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 lg:gap-16 w-full justify-center">
               {[0, 1].map((index) => (
                 <Fragment key={index}>
                   <AnimatePresence mode="wait">
@@ -308,6 +293,7 @@ export function RankingWidget({
                       animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                       exit={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
                       transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                      className="w-full flex justify-center"
                     >
                       <RankingCard
                         song={currentPair[index]}
@@ -319,29 +305,32 @@ export function RankingWidget({
                   </AnimatePresence>
 
                   {index === 0 && (
-                    <div className="flex flex-col gap-6 items-center shrink-0">
-                      <div className="relative">
-                        {/* Simple Emphasized VS Circle */}
-                        <div className="h-16 w-16 rounded-full border-[3px] border-primary flex items-center justify-center bg-background shadow-lg relative z-10">
-                          <span className="text-lg font-mono font-black text-primary select-none">
+                    <div className="flex flex-row md:flex-col gap-3 md:gap-4 lg:gap-6 items-center shrink-0 w-full md:w-auto justify-center px-4 md:px-0">
+                      <div className="relative hidden md:block">
+                        <div className="h-10 w-10 lg:h-16 lg:w-16 rounded-full border-2 md:border-[3px] border-primary flex items-center justify-center bg-background shadow-lg relative z-10">
+                          <span className="text-xs lg:text-lg font-mono font-black text-primary select-none">
                             VS
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-4">
-                        <RankingControlButton
-                          icon={<Scale />}
-                          label="Tie"
-                          onClick={() => handleChoice(null, true)}
-                          disabled={!!winnerId || isTie}
-                        />
-                        <RankingControlButton
-                          icon={<RotateCcw />}
-                          label="Skip"
-                          onClick={handleSkip}
-                          disabled={!!winnerId || isTie}
-                        />
+                      <div className="flex flex-row md:flex-col gap-2 md:gap-3 lg:gap-4 w-full md:w-auto">
+                        <div className="flex-1 md:flex-none">
+                          <RankingControlButton
+                            icon={<Scale className="h-4 w-4 lg:h-5 lg:w-5" />}
+                            label="Tie"
+                            onClick={() => handleChoice(null, true)}
+                            disabled={!!winnerId || isTie}
+                          />
+                        </div>
+                        <div className="flex-1 md:flex-none">
+                          <RankingControlButton
+                            icon={<RotateCcw className="h-4 w-4 lg:h-5 lg:w-5" />}
+                            label="Skip"
+                            onClick={handleSkip}
+                            disabled={!!winnerId || isTie}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -351,47 +340,7 @@ export function RankingWidget({
           )}
         </div>
 
-        {/* Footer/Progress Status */}
-        <div className="flex items-center gap-3 mt-4">
-          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-          <p className="text-[10px] text-muted-foreground/50 font-mono uppercase tracking-[0.4em] font-bold">
-            Session Live • {totalDuels} Decisions • {Math.round(displayScore)}% Stable
-          </p>
-        </div>
       </div>
-    </div>
-  );
-}
-
-type SpeedLinesProps = Readonly<{
-  side: "left" | "right";
-}>;
-
-function SpeedLines({ side }: SpeedLinesProps): JSX.Element {
-  const isLeft = side === "left";
-  return (
-    <div 
-      className={cn(
-        "absolute top-0 bottom-0 flex flex-col justify-center gap-2 pointer-events-none",
-        isLeft ? "-left-12" : "-right-12"
-      )}
-    >
-      {[1, 2, 3].map((i) => (
-        <motion.div
-          key={`${side}-${i}`}
-          className={cn("h-[2px] bg-primary/40 rounded-full", !isLeft && "ml-auto")}
-          animate={{
-            width: isLeft ? [10, 30, 15, 25] : [15, 25, 10, 30],
-            opacity: isLeft ? [0.2, 0.8, 0.4] : [0.4, 0.2, 0.8],
-            x: isLeft ? [0, -4, 2, 0] : [0, 4, -2, 0],
-          }}
-          transition={{
-            duration: (isLeft ? 0.15 : 0.2) + i * 0.05,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-        />
-      ))}
     </div>
   );
 }
@@ -492,7 +441,7 @@ function RankingControlButton({
       variant="outline"
       onClick={onClick}
       disabled={disabled}
-      className="h-14 w-36 rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5"
+      className="h-11 md:h-14 w-full md:w-36 rounded-xl md:rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5 px-4 md:px-0"
     >
       <div className="flex items-center gap-3">
         {icon && (
@@ -500,7 +449,7 @@ function RankingControlButton({
             {icon}
           </div>
         )}
-        <span className="text-xs font-mono uppercase tracking-widest font-black">{label}</span>
+        <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest font-black">{label}</span>
       </div>
     </Button>
   );
@@ -513,74 +462,95 @@ type LeaderboardProps = {
 
 function Leaderboard({ songs, onContinue }: LeaderboardProps): JSX.Element {
   const sortedSongs = [...songs].sort((a, b) => {
-    const scoreA = a.bt_strength ?? (a.local_elo / 3000); // Scale Elo to a similar range as BT strength roughly
+    const scoreA = a.bt_strength ?? (a.local_elo / 3000); 
     const scoreB = b.bt_strength ?? (b.local_elo / 3000);
     return scoreB - scoreA;
   });
 
   return (
-    <div className="flex flex-col items-center justify-start h-full w-full gap-8 max-w-4xl mx-auto py-8">
-      <div className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-4 mb-2">
-          <div className="h-[2px] w-12 bg-primary/20 rounded-full" />
-          <p className="text-[11px] font-black text-primary uppercase tracking-[0.3em] font-mono">
+    <div className="flex flex-col items-center justify-start h-full w-full gap-4 max-w-4xl mx-auto py-4 md:py-8 overflow-hidden">
+      <div className="text-center space-y-2 md:space-y-4 shrink-0">
+        <div className="flex items-center justify-center gap-4 mb-1 md:mb-2">
+          <div className="h-[1px] md:h-[2px] w-8 md:w-12 bg-primary/20 rounded-full" />
+          <p className="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-[0.2em] md:tracking-[0.3em] font-mono">
             Session Results
           </p>
-          <div className="h-[2px] w-12 bg-primary/20 rounded-full" />
+          <div className="h-[1px] md:h-[2px] w-8 md:w-12 bg-primary/20 rounded-full" />
         </div>
-        <h2 className="text-4xl font-black tracking-tighter uppercase italic">
+        <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase italic">
           The Definitive Order
         </h2>
       </div>
 
-      <div className="w-full space-y-2">
+      <div className="w-full flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 py-4">
         {sortedSongs.map((song, index) => (
           <motion.div
             key={song.song_id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="flex items-center gap-4 p-4 rounded-2xl bg-muted/10 border border-border/40 hover:border-primary/20 transition-colors group"
+            className="flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-muted/10 border border-border/40 hover:border-primary/20 transition-colors group"
           >
-            <div className="w-8 text-2xl font-black font-mono text-primary/40 italic group-hover:text-primary transition-colors">
+            <div className="w-10 md:w-14 shrink-0 text-xl md:text-2xl font-black font-mono text-primary/40 italic group-hover:text-primary transition-colors">
               #{index + 1}
             </div>
-            <div className="h-12 w-12 shrink-0">
+            <div className="h-10 w-10 md:h-12 md:w-12 shrink-0">
               <CoverArt
                 title={song.name}
                 url={song.cover_url}
                 spotifyId={song.spotify_id}
-                className="h-12 w-12 rounded-lg object-cover shadow-lg"
+                className="h-10 w-10 md:h-12 md:w-12 rounded-lg object-cover shadow-lg"
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold truncate text-sm uppercase tracking-tight">{song.name}</h3>
-              <p className="text-[10px] font-mono text-muted-foreground/60 uppercase truncate">
+              <h3 className="font-bold truncate text-xs md:text-sm uppercase tracking-tight">{song.name}</h3>
+              <p className="text-[9px] md:text-[10px] font-mono text-muted-foreground/60 uppercase truncate">
                 {song.artist} • {song.album}
               </p>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="text-[10px] font-mono font-black text-primary uppercase tracking-widest">
-                {Math.round((song.bt_strength || 0) * 100)} Strength
-              </div>
-              <div className="text-[9px] font-mono text-muted-foreground/40 uppercase">
-                {song.local_elo} ELO
-              </div>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="pt-8 flex gap-4">
+      <div className="pt-4 md:pt-8 flex gap-4 shrink-0">
         <Button
           onClick={onContinue}
           variant="outline"
-          className="px-12 py-6 rounded-xl font-mono uppercase tracking-widest text-xs font-black"
+          className="px-8 md:px-12 py-5 md:py-6 rounded-xl font-mono uppercase tracking-widest text-[10px] md:text-xs font-black"
         >
           <RotateCcw className="h-4 w-4 mr-2" />
           Keep Ranking
         </Button>
       </div>
+    </div>
+  );
+}
+
+function SpeedLines({ side }: { side: "left" | "right" }): JSX.Element {
+  const isLeft = side === "left";
+  return (
+    <div 
+      className={cn(
+        "absolute top-0 bottom-0 flex flex-col justify-center gap-1 md:gap-2 pointer-events-none",
+        isLeft ? "-left-8 md:-left-12" : "-right-8 md:-right-12"
+      )}
+    >
+      {[1, 2, 3].map((i) => (
+        <motion.div
+          key={`${side}-${i}`}
+          className={cn("h-[1px] md:h-[2px] bg-primary/40 rounded-full", !isLeft && "ml-auto")}
+          animate={{
+            width: isLeft ? [5, 20, 10, 15] : [10, 15, 5, 20],
+            opacity: isLeft ? [0.2, 0.8, 0.4] : [0.4, 0.2, 0.8],
+            x: isLeft ? [0, -2, 1, 0] : [0, 2, -1, 0],
+          }}
+          transition={{
+            duration: (isLeft ? 0.15 : 0.2) + i * 0.05,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
+      ))}
     </div>
   );
 }

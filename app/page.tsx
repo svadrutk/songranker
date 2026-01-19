@@ -15,6 +15,7 @@ import {
 import { Loader2, AlertCircle, ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 type ViewState = "catalog" | "dedupe" | "ranking";
 
@@ -125,17 +126,30 @@ export default function Home(): JSX.Element {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-50"
+            className="absolute left-4 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-40"
           >
             <Button
               variant="outline"
               size="icon"
               onClick={() => setIsSidebarCollapsed(false)}
-              className="h-10 w-10 rounded-full border-primary/20 bg-background/80 backdrop-blur-xl shadow-2xl hover:bg-primary/5 group"
+              className="h-12 w-12 md:h-10 md:w-10 rounded-full border-primary/20 bg-background/80 backdrop-blur-xl shadow-2xl hover:bg-primary/5 group"
             >
-              <ChevronRight className="h-5 w-5 text-primary group-hover:translate-x-0.5 transition-transform" />
+              <ChevronRight className="h-6 w-6 md:h-5 md:w-5 text-primary group-hover:translate-x-0.5 transition-transform" />
             </Button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {!isSidebarCollapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarCollapsed(true)}
+            className="fixed inset-0 bg-background/60 backdrop-blur-sm z-40 md:hidden"
+          />
         )}
       </AnimatePresence>
 
@@ -143,24 +157,25 @@ export default function Home(): JSX.Element {
       <motion.aside 
         initial={false}
         animate={{ 
-          width: isSidebarCollapsed ? 0 : "33.333333%",
-          minWidth: isSidebarCollapsed ? 0 : "320px",
+          width: isSidebarCollapsed ? 0 : "var(--sidebar-width)",
           opacity: isSidebarCollapsed ? 0 : 1,
-          marginRight: isSidebarCollapsed ? 0 : 0,
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="max-w-md border-r bg-muted/10 flex flex-col h-full overflow-hidden relative"
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 md:relative md:z-0 flex flex-col h-full overflow-hidden border-r bg-background md:bg-muted/10 [--sidebar-width:100%] md:[--sidebar-width:33.333333%] md:max-w-md",
+          isSidebarCollapsed ? "pointer-events-none" : "pointer-events-auto"
+        )}
       >
-        <div className="p-6 h-full flex flex-col w-[320px] md:w-full">
+        <div className="p-4 md:p-6 h-full flex flex-col w-full">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xs font-mono font-black uppercase tracking-[0.2em] text-primary/60">Navigator</h2>
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => setIsSidebarCollapsed(true)}
-              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              className="h-10 w-10 md:h-8 md:w-8 text-muted-foreground hover:text-primary"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-6 w-6 md:h-4 md:w-4" />
             </Button>
           </div>
           <Catalog
@@ -176,21 +191,10 @@ export default function Home(): JSX.Element {
       </motion.aside>
 
       {/* Right Panel: Ranking */}
-      <main className="flex-1 h-full p-8 overflow-hidden bg-linear-to-br from-background via-background to-primary/5 relative">
+      <main className="flex-1 h-full overflow-hidden bg-linear-to-br from-background via-background to-primary/5 relative">
         <RankingWidget isRanking={view === "ranking"} sessionId={sessionId} />
-
-        {/* Loading Overlay */}
-        {isCreatingSession && <LoadingOverlay />}
-
-        {/* Error Overlay */}
-        {error && !isCreatingSession && (
-          <ErrorOverlay
-            error={error}
-            onDismiss={() => setError(null)}
-            onRetry={() => startRankingSession(finalSongList)}
-          />
-        )}
       </main>
+
 
       <DeduplicationModal
         isOpen={view === "dedupe"}
