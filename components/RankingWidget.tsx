@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, type SessionSong } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
 import { calculateNewRatings } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check } from "lucide-react";
+import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check, Sparkles } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { RankingCard } from "@/components/RankingCard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -24,6 +24,7 @@ export function RankingWidget({
 }: RankingWidgetProps): JSX.Element {
   const { user, openAuthModal } = useAuth();
   const isMounted = useRef(true);
+  const prevTop10Ref = useRef<string[]>([]);
   const [songs, setSongs] = useState<SessionSong[]>([]);
   const [currentPair, setCurrentPair] = useState<[SessionSong, SessionSong] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +33,7 @@ export function RankingWidget({
   const [isFinished, setIsFinished] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [isTie, setIsTie] = useState(false);
+  const [showRankUpdate, setShowRankUpdate] = useState(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -39,6 +41,34 @@ export function RankingWidget({
       isMounted.current = false;
     };
   }, []);
+
+  // Track Top 10 changes
+  useEffect(() => {
+    if (songs.length === 0) return;
+
+    const currentTop10 = [...songs]
+      .sort((a, b) => {
+        const scoreA = a.bt_strength ?? a.local_elo / 3000;
+        const scoreB = b.bt_strength ?? b.local_elo / 3000;
+        return scoreB - scoreA;
+      })
+      .slice(0, 10)
+      .map((s) => s.song_id);
+
+    if (prevTop10Ref.current.length > 0) {
+      const isDifferent =
+        currentTop10.length !== prevTop10Ref.current.length ||
+        currentTop10.some((id, i) => id !== prevTop10Ref.current[i]);
+
+      if (isDifferent) {
+        setShowRankUpdate(true);
+        const timer = setTimeout(() => setShowRankUpdate(false), 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+
+    prevTop10Ref.current = currentTop10;
+  }, [songs]);
   
   const quantityTarget = Math.max(1, songs.length * 1.5);
   const quantityProgress = Math.min(100, (totalDuels / quantityTarget) * 100);
@@ -266,7 +296,22 @@ export function RankingWidget({
         </div>
 
         {/* Progress Section */}
-        <div className="w-full max-w-xl space-y-1.5 md:space-y-2 lg:space-y-3 px-6 md:px-4 shrink-0">
+        <div className="w-full max-w-xl space-y-1.5 md:space-y-2 lg:space-y-3 px-6 md:px-4 shrink-0 relative">
+          <AnimatePresence>
+            {showRankUpdate && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="absolute -top-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-xl border border-primary/20"
+              >
+                <Sparkles className="h-3 w-3" />
+                <span className="text-[10px] font-mono font-black uppercase tracking-widest whitespace-nowrap">
+                  Top 10 Rankings Updated!
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="flex items-center justify-between px-1">
              <p className="text-[10px] md:text-[10px] font-mono font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-primary/60">
                {getConvergenceLabel(displayScore)}

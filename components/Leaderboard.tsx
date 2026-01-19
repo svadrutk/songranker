@@ -73,7 +73,7 @@ export function Leaderboard({ songs, onContinue }: LeaderboardProps): JSX.Elemen
           <RotateCcw className="h-4 w-4 mr-2" />
           Keep Ranking
         </Button>
-        <p className="text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest text-center max-w-xs animate-pulse">
+        <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest text-center max-w-sm">
           Rankings become more accurate the more you duel.
         </p>
       </div>
