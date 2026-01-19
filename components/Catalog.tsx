@@ -31,10 +31,11 @@ function LoadingSkeleton() {
 interface CatalogProps {
   onToggle: (release: ReleaseGroup, tracks: string[]) => void;
   onSearchStart?: () => void;
+  onStartRanking?: () => void;
   selectedIds: string[];
 }
 
-export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) {
+export function Catalog({ onToggle, onSearchStart, onStartRanking, selectedIds }: CatalogProps) {
   const { user, openAuthModal } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ReleaseGroup[]>([]);
@@ -128,6 +129,11 @@ export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) 
     onToggle(rg, []);
     if (expandedId === rg.id) setExpandedId(null);
   };
+
+  const isAnyTrackLoading = useMemo(() => 
+    selectedIds.some(id => loadingTracks[id]), 
+    [selectedIds, loadingTracks]
+  );
 
   return (
     <div className="flex flex-col h-full gap-6 overflow-hidden relative">
@@ -279,10 +285,20 @@ export function Catalog({ onToggle, onSearchStart, selectedIds }: CatalogProps) 
 
       {selectedIds.length > 0 && (
         <div className="absolute bottom-6 left-0 right-0 px-6 animate-in slide-in-from-bottom-4">
-          <Button className="w-full bg-green-500 hover:bg-green-600 text-black font-mono py-6 rounded-xl shadow-lg shadow-green-900/20 text-lg group flex items-center justify-center gap-2">
-            <Layers className="h-5 w-5 mr-2" />
-            READY TO RANK?
-            <span className="ml-1 px-2 py-0.5 bg-black/10 rounded-md text-xs">{selectedIds.length}</span>
+          <Button 
+            onClick={() => onStartRanking?.()}
+            disabled={isAnyTrackLoading}
+            className="w-full bg-green-500 hover:bg-green-600 text-black font-mono py-6 rounded-xl shadow-lg shadow-green-900/20 text-lg group flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+          >
+            {isAnyTrackLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Layers className="h-5 w-5 mr-2" />
+            )}
+            {isAnyTrackLoading ? "FETCHING TRACKS..." : "READY TO RANK?"}
+            {!isAnyTrackLoading && (
+              <span className="ml-1 px-2 py-0.5 bg-black/10 rounded-md text-xs">{selectedIds.length}</span>
+            )}
           </Button>
         </div>
       )}

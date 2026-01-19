@@ -8,15 +8,17 @@ import { useAuth } from "@/components/AuthProvider";
 interface RankingWidgetProps {
   selectedReleases: ReleaseGroup[];
   allTracks: Record<string, string[]>;
+  isRanking?: boolean;
+  finalSongList?: string[];
 }
 
-export function RankingWidget({ selectedReleases, allTracks }: RankingWidgetProps) {
+export function RankingWidget({ selectedReleases, allTracks, isRanking, finalSongList }: RankingWidgetProps) {
   const { user, openAuthModal } = useAuth();
   const totalTracks = selectedReleases.reduce((sum, r) => sum + (allTracks[r.id]?.length || 0), 0);
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full gap-8">
-      {user && selectedReleases.length > 0 ? (
+      {user && (selectedReleases.length > 0 || isRanking) ? (
         <div className="flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-300">
           <div className="text-center space-y-1">
             <p className="text-[10px] font-bold text-primary uppercase tracking-widest">
@@ -28,7 +30,7 @@ export function RankingWidget({ selectedReleases, allTracks }: RankingWidgetProp
                 : `${selectedReleases[0].title} + ${selectedReleases.length - 1} more`}
             </h2>
             <p className="text-[10px] font-mono text-muted-foreground uppercase">
-              {totalTracks} Total Tracks Loaded
+              {isRanking ? `${finalSongList?.length} Unique Tracks Ready` : `${totalTracks} Total Tracks Loaded`}
             </p>
           </div>
           
