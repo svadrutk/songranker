@@ -1,11 +1,35 @@
 # Song Ranker - Development Log
 
-**Last Updated**: January 18, 2026  
-**Status**: ✅ **ACTIVE** - Phase 3 Complete
+**Last Updated**: January 19, 2026  
+**Status**: ✅ **ACTIVE** - Phase 4 Refinements
 
 ---
 
 ## 📋 **Decision Log**
+
+### **Decision #10: Advanced Duel Animations & Polished Deletion UX**
+**Date**: January 19, 2026
+**Author**: opencode (Interactive Agent)
+
+**What Changed**:
+- **Winner Celebration**: Added a "winner" state to `RankingCard.tsx` featuring a scale-up animation, a trophy icon overlay, and a primary-color flash effect.
+- **Smooth Transitions**: Implemented `AnimatePresence` in `RankingWidget.tsx` for smooth entry/exit of song cards during duels, using directional slides and blur effects.
+- **Duel Timing**: Introduced a 600ms delay after a selection to allow the winner animation to play before transitioning to the next pair.
+- **Safe Deletion**: Replaced the native `confirm()` dialog in `SessionSelector.tsx` with a custom, high-fidelity `DeleteConfirmationModal` built with `framer-motion` and Tailwind.
+- **Accessibility**: Refactored session selection items to avoid nested buttons, using `div` with proper keyboard interaction handlers.
+- **Code Optimization**: Refactored the `RankingWidget` to use `.map()` for card slots, reducing JSX duplication and simplifying animation logic.
+
+**Why**:
+- **Gamification**: Visual feedback for winning songs makes the ranking process more engaging and rewarding.
+- **User Trust**: A custom deletion modal provides a more integrated and "safe" feeling for destructive actions compared to browser defaults.
+- **Polish**: Smooth transitions reduce cognitive load when the UI state changes rapidly during duels.
+
+**Impact**:
+- Significantly improved visual quality of the core ranking loop.
+- More robust and accessible session management.
+- Cleaner, more maintainable component architecture.
+
+---
 
 ### **Decision #9: Session Management & Dynamic Sidebar Layout**
 **Date**: January 19, 2026
