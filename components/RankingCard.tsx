@@ -1,30 +1,43 @@
 "use client";
 
 import type { JSX } from "react";
+import { motion } from "framer-motion";
 import type { SessionSong } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { CoverArt } from "@/components/CoverArt";
+import { Trophy } from "lucide-react";
 
 type RankingCardProps = Readonly<{
   song: SessionSong;
   onClick: () => void;
   isActive?: boolean;
+  isWinner?: boolean;
+  disabled?: boolean;
 }>;
 
 export function RankingCard({
   song,
   onClick,
   isActive,
+  isWinner,
+  disabled,
 }: RankingCardProps): JSX.Element {
   return (
-    <button
+    <motion.button
       onClick={onClick}
+      disabled={disabled}
+      initial={false}
+      animate={isWinner ? { scale: [1, 1.05, 1] } : {}}
+      whileTap={!disabled ? { scale: 0.98 } : {}}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
         "group relative flex flex-col w-80 h-[28rem] rounded-3xl border-2 transition-all duration-500 overflow-hidden text-left outline-none",
         "bg-card border-border hover:border-primary/50 hover:bg-primary/[0.02]",
         "hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.05)]",
         "focus-visible:ring-2 focus-visible:ring-primary/50",
-        isActive && "border-primary bg-primary/[0.05] ring-2 ring-primary/20"
+        isActive && "border-primary bg-primary/[0.05] ring-2 ring-primary/20",
+        isWinner && "border-primary z-10 shadow-[0_0_40px_-5px_var(--primary)]",
+        disabled && "pointer-events-none opacity-80"
       )}
     >
       {/* Artwork Section - Perfect Square */}
@@ -35,6 +48,27 @@ export function RankingCard({
           spotifyId={song.spotify_id}
           className="w-full h-full"
         />
+        
+        {/* Win Overlays */}
+        {isWinner && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.4, 0] }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0 bg-primary pointer-events-none z-20"
+            />
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
+            >
+              <div className="bg-primary p-4 rounded-full shadow-2xl">
+                <Trophy className="w-12 h-12 text-primary-foreground" />
+              </div>
+            </motion.div>
+          </>
+        )}
       </div>
 
       {/* Info Section */}
@@ -66,6 +100,6 @@ export function RankingCard({
 
       {/* Interactive Overlay */}
       <div className="absolute inset-0 ring-1 ring-inset ring-white/5 pointer-events-none" />
-    </button>
+    </motion.button>
   );
 }

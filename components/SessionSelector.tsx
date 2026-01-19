@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback, type JSX } from "react";
-import { Calendar, Layers, Loader2, PlayCircle, History, CheckCircle2, Trash2 } from "lucide-react";
+import { Calendar, Layers, Loader2, PlayCircle, History, CheckCircle2, Trash2, AlertTriangle, X } from "lucide-react";
 import { getUserSessions, type SessionSummary, deleteSession } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 type SessionSelectorProps = Readonly<{
   onSelect: (sessionId: string) => void;
@@ -17,6 +19,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadSessions = useCallback(async () => {
     if (!user) return;
@@ -35,10 +38,16 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
     loadSessions();
   }, [loadSessions]);
 
-  const handleDelete = async (e: React.MouseEvent, sessionId: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this session? This action cannot be undone.")) return;
+    setConfirmDeleteId(sessionId);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId) return;
+
+    const sessionId = confirmDeleteId;
+    setConfirmDeleteId(null);
     setDeletingId(sessionId);
     try {
       const success = await deleteSession(sessionId);
@@ -83,11 +92,19 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
       </h2>
       <div className="space-y-1">
         {sessions.map((session) => (
-          <button
+          <div
             key={session.session_id}
             onClick={() => onSelect(session.session_id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(session.session_id);
+              }
+            }}
             className={cn(
-              "w-full group flex flex-col p-3 rounded-md border transition-all text-left relative",
+              "w-full group flex flex-col p-3 rounded-md border transition-all text-left relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary",
               activeSessionId === session.session_id
                 ? "border-white bg-white/5 shadow-xs"
                 : "bg-card border-transparent hover:bg-muted/50 hover:border-border"
@@ -105,7 +122,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
                   <Loader2 className="h-4 w-4 animate-spin text-destructive" />
                 ) : (
                   <button
-                    onClick={(e) => handleDelete(e, session.session_id)}
+                    onClick={(e) => handleDeleteClick(e, session.session_id)}
                     className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive transition-colors"
                     title="Delete Session"
                   >
@@ -133,9 +150,92 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
                 {session.comparison_count} duels
               </div>
             </div>
-          </button>
+          </div>
         ))}
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+        artistName={sessions.find(s => s.session_id === confirmDeleteId)?.primary_artist || ""}
+      />
     </div>
+  );
+}
+
+type DeleteConfirmationModalProps = Readonly<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  artistName: string;
+}>;
+
+function DeleteConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  artistName 
+}: DeleteConfirmationModalProps): JSX.Element {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-background/60 backdrop-blur-md"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-sm bg-card border border-border/40 rounded-3xl p-6 shadow-2xl overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 bg-destructive/5 rounded-full blur-3xl" />
+            
+            <div className="relative">
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+                <button 
+                  onClick={onClose}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2 mb-8">
+                <h3 className="text-xl font-black tracking-tight uppercase italic">Confirm Deletion</h3>
+                <p className="text-sm text-muted-foreground font-mono leading-relaxed">
+                  Permanently remove session for <span className="text-foreground font-bold">{artistName}</span>? This cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  className="flex-1 font-mono uppercase tracking-widest text-[10px] font-bold h-11 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={onConfirm}
+                  className="flex-1 bg-destructive hover:bg-destructive/90 text-white font-mono uppercase tracking-widest text-[10px] font-bold h-11 rounded-xl shadow-lg shadow-destructive/20"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

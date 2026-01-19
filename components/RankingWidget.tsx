@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import type { JSX } from "react";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, type SessionSong } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
@@ -26,6 +26,8 @@ export function RankingWidget({
   const [currentPair, setCurrentPair] = useState<[SessionSong, SessionSong] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [totalDuels, setTotalDuels] = useState(0);
+  const [winnerId, setWinnerId] = useState<string | null>(null);
+  const [isTie, setIsTie] = useState(false);
 
   // Initial load of songs
   useEffect(() => {
@@ -50,17 +52,24 @@ export function RankingWidget({
   }, [isRanking, sessionId]);
 
   const handleChoice = useCallback(
-    async (winner: SessionSong | null, isTie: boolean = false) => {
-      if (!currentPair || !sessionId) return;
+    async (winner: SessionSong | null, tie: boolean = false) => {
+      if (!currentPair || !sessionId || winnerId) return;
 
       const [songA, songB] = currentPair;
-      const winnerId = winner?.song_id || null;
+      const wId = winner?.song_id || null;
 
-      // 1. Calculate new ratings
-      const scoreA = isTie ? 0.5 : winnerId === songA.song_id ? 1 : 0;
+      // 1. Trigger Animation
+      setWinnerId(wId);
+      setIsTie(tie);
+
+      // 2. Wait for animation to finish
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      // 3. Calculate new ratings
+      const scoreA = tie ? 0.5 : wId === songA.song_id ? 1 : 0;
       const [newEloA, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, scoreA);
 
-      // 2. Optimistic Update & Prepare next pair
+      // 4. Update & Prepare next pair
       setSongs((prevSongs) => {
         const updated = prevSongs.map((s) => {
           if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
@@ -68,26 +77,27 @@ export function RankingWidget({
           return s;
         });
 
-        // Set next pair immediately using the updated ratings
         setCurrentPair(getNextPair(updated));
         return updated;
       });
 
       setTotalDuels((prev) => prev + 1);
+      setWinnerId(null);
+      setIsTie(false);
 
-      // 3. Sync with Backend
+      // 5. Sync with Backend
       try {
         await createComparison(sessionId, {
           song_a_id: songA.song_id,
           song_b_id: songB.song_id,
-          winner_id: winnerId,
-          is_tie: isTie,
+          winner_id: wId,
+          is_tie: tie,
         });
       } catch (error) {
         console.error("Failed to sync comparison:", error);
       }
     },
-    [currentPair, sessionId]
+    [currentPair, sessionId, winnerId]
   );
 
   const handleSkip = useCallback((): void => {
@@ -163,30 +173,58 @@ export function RankingWidget({
 
         {/* Duel Area */}
         <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 w-full justify-center min-h-[32rem]">
-          {currentPair ? (
-            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 w-full justify-center">
-              <RankingCard song={currentPair[0]} onClick={() => handleChoice(currentPair[0])} />
-
-              {/* Static Middle Section */}
-              <div className="flex flex-col gap-6 items-center shrink-0">
-                <div className="relative group">
-                  <div className="h-14 w-14 rounded-full border-2 border-primary/30 flex items-center justify-center bg-background/80 backdrop-blur-xl relative z-10 shadow-2xl">
-                    <span className="text-sm font-mono font-black text-primary italic">VS</span>
-                  </div>
-                  <div className="absolute inset-[-4px] rounded-full border border-primary/10 animate-pulse" />
-                  <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <RankingControlButton icon={<Scale />} label="Tie" onClick={() => handleChoice(null, true)} />
-                  <RankingControlButton icon={<RotateCcw />} label="Skip" onClick={handleSkip} />
-                </div>
-              </div>
-
-              <RankingCard song={currentPair[1]} onClick={() => handleChoice(currentPair[1])} />
-            </div>
-          ) : (
+          {!currentPair ? (
             <PairingLoader />
+          ) : (
+            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16 w-full justify-center">
+              {[0, 1].map((index) => (
+                <Fragment key={index}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentPair[index].song_id}
+                      initial={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
+                      animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
+                      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                      <RankingCard
+                        song={currentPair[index]}
+                        onClick={() => handleChoice(currentPair[index])}
+                        isWinner={winnerId === currentPair[index].song_id}
+                        disabled={!!winnerId || isTie}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {index === 0 && (
+                    <div className="flex flex-col gap-6 items-center shrink-0">
+                      <div className="relative group">
+                        <div className="h-14 w-14 rounded-full border-2 border-primary/30 flex items-center justify-center bg-background/80 backdrop-blur-xl relative z-10 shadow-2xl">
+                          <span className="text-sm font-mono font-black text-primary italic">VS</span>
+                        </div>
+                        <div className="absolute inset-[-4px] rounded-full border border-primary/10 animate-pulse" />
+                        <div className="absolute inset-0 rounded-full bg-primary/5 animate-ping opacity-20" />
+                      </div>
+
+                      <div className="flex flex-col gap-4">
+                        <RankingControlButton
+                          icon={<Scale />}
+                          label="Tie"
+                          onClick={() => handleChoice(null, true)}
+                          disabled={!!winnerId || isTie}
+                        />
+                        <RankingControlButton
+                          icon={<RotateCcw />}
+                          label="Skip"
+                          onClick={handleSkip}
+                          disabled={!!winnerId || isTie}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </Fragment>
+              ))}
+            </div>
           )}
         </div>
 
@@ -317,17 +355,20 @@ type RankingControlButtonProps = Readonly<{
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }>;
 
 function RankingControlButton({
   icon,
   label,
   onClick,
+  disabled,
 }: RankingControlButtonProps): JSX.Element {
   return (
     <Button
       variant="outline"
       onClick={onClick}
+      disabled={disabled}
       className="h-14 w-36 rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5"
     >
       <div className="flex items-center gap-3">
