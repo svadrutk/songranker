@@ -29,7 +29,7 @@ export default function Home(): JSX.Element {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   // Auto-collapse sidebar when ranking starts
   useEffect(() => {
@@ -37,6 +37,29 @@ export default function Home(): JSX.Element {
       setIsSidebarCollapsed(true);
     }
   }, [view]);
+
+  // Handle sidebar visibility
+  useEffect(() => {
+    const handleResize = () => {
+      // If we are already ranking, don't mess with the sidebar based on auth
+      if (view === "ranking") return;
+
+      const isMobile = window.innerWidth < 768;
+      
+      if (!isMobile) {
+        setIsSidebarCollapsed(false);
+      } else {
+        // Mobile: Open if logged in, closed if not
+        setIsSidebarCollapsed(!user);
+      }
+    };
+
+    // Initial check
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [user, view]);
 
   const handleToggle = useCallback((release: ReleaseGroup, tracks: string[]) => {
     if (tracks.length === 0) {

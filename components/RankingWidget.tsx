@@ -33,6 +33,7 @@ export function RankingWidget({
   const [isFinished, setIsFinished] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [isTie, setIsTie] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
   const [showRankUpdate, setShowRankUpdate] = useState(false);
 
   useEffect(() => {
@@ -183,8 +184,13 @@ export function RankingWidget({
     [currentPair, sessionId, winnerId]
   );
 
-  const handleSkip = useCallback((): void => {
+  const handleSkip = useCallback(async (): Promise<void> => {
     if (!currentPair || !sessionId) return;
+    
+    setIsSkipping(true);
+    // Short delay for visual feedback
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     const [songA, songB] = currentPair;
 
     // Apply "double loss" penalty in local state for immediate feedback
@@ -202,6 +208,7 @@ export function RankingWidget({
     });
 
     setTotalDuels((prev) => prev + 1);
+    setIsSkipping(false);
 
     // Persist skip to backend
     createComparison(sessionId, {
@@ -212,6 +219,37 @@ export function RankingWidget({
     }).catch(err => console.error("Failed to record skip:", err));
 
   }, [currentPair, sessionId]);
+
+  useEffect(() => {
+    if (!currentPair || !!winnerId || isTie || isSkipping) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only active on non-mobile screens (md breakpoint is typically 768px)
+      if (window.innerWidth < 768) return;
+
+      switch (e.code) {
+        case "ArrowLeft":
+          e.preventDefault();
+          handleChoice(currentPair[0]);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          handleChoice(currentPair[1]);
+          break;
+        case "Space":
+          e.preventDefault();
+          handleChoice(null, true);
+          break;
+        case "Escape":
+          e.preventDefault();
+          handleSkip();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentPair, winnerId, isTie, isSkipping, handleChoice, handleSkip]);
 
   const getConvergenceLabel = (score: number) => {
     if (score < 30) return "Calibrating Rankings...";
@@ -225,8 +263,7 @@ export function RankingWidget({
       <RankingPlaceholder
         title="Authentication Required"
         description="Sign in to search for artists, select albums, and start ranking your favorite tracks."
-        icon={<LogIn className="h-5 w-5 group-hover:translate-x-1 transition-transform" />}
-        buttonText="Sign In"
+        icon={<LogIn className="h-6 w-6 text-primary" />}
         onClick={() => openAuthModal("login")}
       />
     );
@@ -250,9 +287,33 @@ export function RankingWidget({
         <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Loading Session Data...
         </p>
+    </div>
+  );
+}
+
+function KeyboardShortcutsHelp(): JSX.Element {
+  return (
+    <div className="hidden md:flex flex-col gap-1.5 fixed top-24 right-8 z-40 opacity-40 hover:opacity-100 transition-opacity p-4 rounded-xl bg-background/5 backdrop-blur-sm border border-white/5">
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Select Left</span>
+        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">←</kbd>
       </div>
-    );
-  }
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Select Right</span>
+        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">→</kbd>
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Tie</span>
+        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">Space</kbd>
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Skip</span>
+        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">Esc</kbd>
+      </div>
+    </div>
+  );
+}
+
 
   if (isFinished) {
     return (
@@ -265,6 +326,7 @@ export function RankingWidget({
 
   return (
     <div className="flex flex-col h-full w-full max-w-7xl mx-auto px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-6 md:py-6 lg:px-8 lg:py-8 overflow-hidden">
+      <KeyboardShortcutsHelp />
       <div className="flex flex-col items-center gap-4 md:gap-6 lg:gap-8 animate-in fade-in zoom-in duration-700 w-full h-full min-h-0">
         {/* Header Section */}
         <div className="text-center space-y-2 md:space-y-3 relative shrink-0">
@@ -397,7 +459,8 @@ export function RankingWidget({
                             icon={<Scale className="h-3.5 w-3.5 lg:h-5 lg:w-5" />}
                             label="Tie"
                             onClick={() => handleChoice(null, true)}
-                            disabled={!!winnerId || isTie}
+                            disabled={!!winnerId || isTie || isSkipping}
+                            isActive={isTie}
                           />
                         </div>
                         <div className="flex-1 md:flex-none">
@@ -405,7 +468,8 @@ export function RankingWidget({
                             icon={<RotateCcw className="h-3.5 w-3.5 lg:h-5 lg:w-5" />}
                             label="Skip"
                             onClick={handleSkip}
-                            disabled={!!winnerId || isTie}
+                            disabled={!!winnerId || isTie || isSkipping}
+                            isActive={isSkipping}
                           />
                         </div>
                       </div>
@@ -487,10 +551,13 @@ function RankingPlaceholder({
           {!hideButton && (
             <Button
               onClick={onClick}
-              className="px-12 py-6 rounded-xl font-bold uppercase text-lg group"
+              className={cn(
+                "border-2 border-primary bg-transparent hover:bg-primary/10 hover:scale-105 transition-all duration-300 group",
+                buttonText ? "h-auto py-4 px-8 rounded-full" : "h-16 w-16 rounded-full"
+              )}
             >
               {icon}
-              {buttonText}
+              {buttonText && <span className="ml-2">{buttonText}</span>}
             </Button>
           )}
         </div>
@@ -504,6 +571,7 @@ type RankingControlButtonProps = Readonly<{
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  isActive?: boolean;
 }>;
 
 function RankingControlButton({
@@ -511,17 +579,21 @@ function RankingControlButton({
   label,
   onClick,
   disabled,
+  isActive,
 }: RankingControlButtonProps): JSX.Element {
   return (
     <Button
-      variant="outline"
+      variant={isActive ? "default" : "outline"}
       onClick={onClick}
       disabled={disabled}
-      className="h-10 md:h-14 w-full md:w-36 rounded-xl md:rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5 px-4 md:px-0"
+      className={cn(
+        "h-10 md:h-14 w-full md:w-36 rounded-xl md:rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5 px-4 md:px-0",
+        isActive && "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:border-primary shadow-lg shadow-primary/25"
+      )}
     >
       <div className="flex items-center gap-3">
         {icon && (
-          <div className="text-muted-foreground group-hover:text-primary transition-colors">
+          <div className={cn("text-muted-foreground transition-colors", isActive ? "text-primary-foreground" : "group-hover:text-primary")}>
             {icon}
           </div>
         )}
