@@ -28,33 +28,34 @@ export function ShareVisual({ songs, orderId, dateStr, timeStr }: ShareVisualPro
       className="w-[1080px] bg-black p-20 flex flex-col items-center justify-start"
       style={{ 
         minHeight: '1200px',
-        backgroundColor: '#000000', // Explicit hex for mobile safety
+        backgroundColor: '#000000', 
+        color: '#ffffff',
         fontFamily: "'GeistMono-Export-Regular', monospace" 
       }}
     >
       {/* Receipt Paper */}
-      <div className="w-[850px] bg-[#1a1a1a] text-white flex flex-col relative shadow-[0_50px_100px_rgba(0,0,0,0.5)]">
+      <div className="w-[850px] bg-[#1a1a1a] text-white flex flex-col relative shadow-[0_50px_100px_rgba(0,0,0,0.5)]" style={{ backgroundColor: '#1a1a1a', color: '#ffffff' }}>
         {/* Top Jagged Edge */}
         <div className="absolute -top-6 left-0 w-full h-6 overflow-hidden flex">
           {[...Array(30)].map((_, i) => (
-            <div key={i} className="w-8 h-8 bg-[#1a1a1a] rotate-45 transform origin-bottom-left shrink-0" style={{ marginTop: '16px' }} />
+            <div key={i} className="w-8 h-8 bg-[#1a1a1a] rotate-45 transform origin-bottom-left shrink-0" style={{ marginTop: '16px', backgroundColor: '#1a1a1a' }} />
           ))}
         </div>
 
         {/* Receipt Header */}
-        <div className="p-16 text-center border-b-2 border-dashed border-white/10">
+        <div className="p-16 text-center border-b-2 border-dashed border-white/10" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
           <h1 
             className="text-6xl tracking-tighter uppercase mb-4"
-            style={{ fontFamily: "'Geist-Export-Black', sans-serif", fontWeight: 900 }}
+            style={{ fontFamily: "'Geist-Export-Black', sans-serif", fontWeight: 900, color: '#ffffff' }}
           >
             SongRanker
           </h1>
           <div 
-            className="space-y-1 text-2xl font-bold opacity-40"
-            style={{ fontFamily: "'GeistMono-Export-Bold', monospace" }}
+            className="space-y-1 text-2xl font-bold"
+            style={{ fontFamily: "'GeistMono-Export-Bold', monospace", color: 'rgba(255,255,255,0.4)' }}
           >
-            <p>ORDER #SR-{orderId}</p>
-            <p>{dateStr} @ {timeStr}</p>
+            <p style={{ color: 'rgba(255,255,255,0.4)' }}>ORDER #SR-{orderId}</p>
+            <p style={{ color: 'rgba(255,255,255,0.4)' }}>{dateStr} @ {timeStr}</p>
           </div>
         </div>
 
@@ -62,17 +63,17 @@ export function ShareVisual({ songs, orderId, dateStr, timeStr }: ShareVisualPro
         <div className="px-16 py-12 space-y-10">
           <div 
             className="flex justify-between text-3xl uppercase border-b-2 border-white/5 pb-6"
-            style={{ fontFamily: "'GeistMono-Export-Bold', monospace" }}
+            style={{ fontFamily: "'GeistMono-Export-Bold', monospace", color: '#ffffff', borderColor: 'rgba(255,255,255,0.05)' }}
           >
-            <span>TRACK / ARTIST</span>
-            <span>QTY</span>
+            <span style={{ color: '#ffffff' }}>TRACK / ARTIST</span>
+            <span style={{ color: '#ffffff' }}>QTY</span>
           </div>
           
           <div className="space-y-12">
             {top10.map((song, index) => (
-              <div key={song.song_id} className="flex justify-between items-center">
+              <div key={song.song_id} className="flex justify-between items-center" style={{ color: '#ffffff' }}>
                 <div className="flex items-center gap-6 flex-1 min-w-0 pr-8">
-                  <div className="w-20 h-20 shrink-0 border border-white/10 overflow-hidden bg-white/5">
+                  <div className="w-20 h-20 shrink-0 border border-white/10 overflow-hidden bg-white/5" style={{ borderColor: 'rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.05)' }}>
                     {song.cover_url ? (
                       <img 
                         src={song.cover_url} 
@@ -83,28 +84,28 @@ export function ShareVisual({ songs, orderId, dateStr, timeStr }: ShareVisualPro
                         decoding="sync"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center opacity-20">
+                      <div className="w-full h-full flex items-center justify-center" style={{ color: 'rgba(255,255,255,0.2)' }}>
                         ?
                       </div>
                     )}
                   </div>
                   <div className="flex items-start gap-4 min-w-0">
                     <span 
-                      className="text-4xl opacity-20 w-12 shrink-0"
-                      style={{ fontFamily: "'GeistMono-Export-Bold', monospace" }}
+                      className="text-4xl w-12 shrink-0"
+                      style={{ fontFamily: "'GeistMono-Export-Bold', monospace", color: 'rgba(255,255,255,0.2)' }}
                     >
                       {index + 1}
                     </span>
                     <div className="min-w-0">
                       <p 
                         className="text-4xl uppercase tracking-tight leading-none mb-2 truncate"
-                        style={{ fontFamily: "'Geist-Export-Black', sans-serif", fontWeight: 900 }}
+                        style={{ fontFamily: "'Geist-Export-Black', sans-serif", fontWeight: 900, color: '#ffffff' }}
                       >
                         {song.name}
                       </p>
                       <p 
-                        className="text-2xl opacity-40 uppercase tracking-widest truncate"
-                        style={{ fontFamily: "'GeistMono-Export-Bold', monospace" }}
+                        className="text-2xl uppercase tracking-widest truncate"
+                        style={{ fontFamily: "'GeistMono-Export-Bold', monospace", color: 'rgba(255,255,255,0.4)' }}
                       >
                         {song.artist}
                       </p>
@@ -112,8 +113,8 @@ export function ShareVisual({ songs, orderId, dateStr, timeStr }: ShareVisualPro
                   </div>
                 </div>
                 <span 
-                  className="text-3xl opacity-20 shrink-0"
-                  style={{ fontFamily: "'GeistMono-Export-Bold', monospace" }}
+                  className="text-3xl shrink-0"
+                  style={{ fontFamily: "'GeistMono-Export-Bold', monospace", color: 'rgba(255,255,255,0.2)' }}
                 >
                   1x
                 </span>
@@ -129,17 +130,17 @@ export function ShareVisual({ songs, orderId, dateStr, timeStr }: ShareVisualPro
                 {barcodePattern.map((bar, i) => (
                   <div 
                     key={i} 
-                    className="bg-white flex-1" 
+                    className="flex-1" 
                     style={{ 
-                      opacity: bar.visible ? 0.9 : 0,
+                      backgroundColor: bar.visible ? 'rgba(255,255,255,0.9)' : 'transparent',
                       flexGrow: bar.width
                     }} 
                   />
                 ))}
               </div>
               <p 
-                className="text-center text-2xl opacity-20 tracking-[1em] ml-[1em]"
-                style={{ fontFamily: "'GeistMono-Export-Bold', monospace" }}
+                className="text-center text-2xl tracking-[1em] ml-[1em]"
+                style={{ fontFamily: "'GeistMono-Export-Bold', monospace", color: 'rgba(255,255,255,0.2)' }}
               >
                 SONGRANKER.APP
               </p>

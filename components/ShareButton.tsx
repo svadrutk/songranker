@@ -91,11 +91,6 @@ export function ShareButton({ songs }: ShareButtonProps): JSX.Element {
         pixelRatio,
         height: element.scrollHeight,
         width: 1080,
-        style: {
-          transform: "scale(1)",
-          left: "0",
-          top: "0",
-        }
       });
 
       // Trigger confetti
@@ -157,7 +152,7 @@ export function ShareButton({ songs }: ShareButtonProps): JSX.Element {
 
       {/* Hidden container for image generation */}
       <div 
-        className="fixed pointer-events-none overflow-hidden" 
+        className="absolute pointer-events-none overflow-hidden" 
         style={{ left: '-9999px', top: '0', width: '1080px' }} 
         aria-hidden="true"
       >
