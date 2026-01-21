@@ -135,6 +135,11 @@ export default function Home(): JSX.Element {
   );
 
   const handleSessionSelect = useCallback((id: string) => {
+    // Clear search state when switching to an existing session
+    setSelectedReleases([]);
+    setAllTracks({});
+    setError(null);
+    
     setSessionId(id);
     setView("ranking");
   }, []);

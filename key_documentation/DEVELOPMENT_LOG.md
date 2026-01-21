@@ -228,6 +228,24 @@
 
 ---
 
+### **Decision #17: Keyboard Shortcut Optimization for Ranking Loop**
+**Date**: January 20, 2026
+**Author**: opencode (Interactive Agent)
+
+**What Changed**:
+- **Shortcuts**: Switched the keyboard shortcuts for "Tie" and "Skip" from `Space`/`Escape` to `ArrowUp`/`ArrowDown`.
+- **UI Feedback**: Updated the `KeyboardShortcutsHelp` component to reflect the new arrow-based control scheme.
+
+**Why**:
+- **Ergonomics**: Mapping all primary ranking actions to the arrow keys (Left/Right for selection, Up/Down for Tie/Skip) provides a more cohesive and comfortable "directional" control scheme for power users.
+- **Consistency**: Centralizing controls on the arrow keys reduces hand movement and makes the ranking process feel more fluid.
+
+**Impact**:
+- Improved ergonomics for keyboard-based ranking.
+- More intuitive shortcut help graphic.
+
+---
+
 ## 🐛 **Issues Tracking**
 
 ### **Issue: Total Removal of Duplicated Songs (RESOLVED)**

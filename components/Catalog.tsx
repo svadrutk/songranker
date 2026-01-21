@@ -10,7 +10,7 @@ import { SessionSelector } from "@/components/SessionSelector";
 import { cn } from "@/lib/utils";
 
 type ReleaseType = "Album" | "EP" | "Single" | "Other";
-type CatalogView = "search" | "sessions";
+type CatalogView = "search" | "rankings";
 
 function LoadingSkeleton(): JSX.Element {
   return (
@@ -60,14 +60,14 @@ function ViewToggle({ view, setView }: ViewToggleProps): JSX.Element {
         Search
       </button>
       <button
-        onClick={() => setView("sessions")}
+        onClick={() => setView("rankings")}
         className={cn(
           "flex-1 flex items-center justify-center gap-2 py-2 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
-          view === "sessions" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
+          view === "rankings" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
         )}
       >
         <History className="h-3 w-3" />
-        My Sessions
+        My Rankings
       </button>
     </div>
   );
@@ -197,7 +197,7 @@ export function Catalog({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search artist..."
-                className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/10 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
               />
             </div>
             <Button type="submit" disabled={loading} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono relative group">
@@ -257,7 +257,7 @@ export function Catalog({
                     onClick={() => handleSelect(release)}
                     className={`group flex flex-col p-1.5 rounded-md border transition-all cursor-pointer relative ${
                       isSelected 
-                        ? "border-white bg-white/5 shadow-xs" 
+                        ? "border-primary bg-primary/5 shadow-xs" 
                         : "bg-card border-transparent text-card-foreground hover:bg-muted/50 hover:border-border"
                     }`}
                   >
@@ -276,7 +276,7 @@ export function Catalog({
                         )}
                       </div>
                       <div className="flex flex-col flex-1 overflow-hidden">
-                        <span className={`font-mono text-xs font-medium truncate ${isSelected ? "text-white" : ""}`}>
+                        <span className={`font-mono text-xs font-medium truncate ${isSelected ? "text-primary" : ""}`}>
                           {release.title}
                         </span>
                         <div className="flex items-center gap-2">
@@ -313,7 +313,7 @@ export function Catalog({
                         {tracksCache[release.id].map((track, i) => (
                           <div key={i} className="flex items-center gap-2 group/track">
                             <span className="text-[10px] font-mono text-muted-foreground w-4 shrink-0 text-right">{i + 1}</span>
-                            <span className="text-[10px] font-mono truncate text-muted-foreground group-hover/track:text-white transition-colors">
+                            <span className="text-[10px] font-mono truncate text-muted-foreground group-hover/track:text-foreground transition-colors">
                               {track}
                             </span>
                           </div>

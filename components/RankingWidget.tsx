@@ -43,6 +43,50 @@ export function RankingWidget({
     };
   }, []);
 
+  useEffect(() => {
+    if (!isRanking || !sessionId) return;
+
+    // Reset all session-specific state when the sessionId changes or ranking starts
+    setSongs([]);
+    setCurrentPair(null);
+    setTotalDuels(0);
+    setConvergence(0);
+    setIsFinished(false);
+    setWinnerId(null);
+    setIsTie(false);
+    setIsSkipping(false);
+    setShowRankUpdate(false);
+    prevTop10Ref.current = [];
+
+    let isCurrent = true;
+
+    async function loadSongs(): Promise<void> {
+      setIsLoading(true);
+      try {
+        const detail = await getSessionDetail(sessionId!);
+        if (detail && isMounted.current && isCurrent) {
+          setSongs(detail.songs);
+          setTotalDuels(detail.comparison_count);
+          setConvergence(detail.convergence_score ?? 0);
+          setCurrentPair(getNextPair(detail.songs));
+        }
+      } catch (error) {
+        if (isCurrent) {
+          console.error("Failed to load ranking songs:", error);
+        }
+      } finally {
+        if (isMounted.current && isCurrent) {
+          setIsLoading(false);
+        }
+      }
+    }
+    loadSongs();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [isRanking, sessionId]);
+
   const quantityTarget = Math.max(1, songs.length * 1.5);
   const quantityProgress = Math.min(100, (totalDuels / quantityTarget) * 100);
   const optimisticMin = Math.min(40, quantityProgress);
@@ -76,30 +120,6 @@ export function RankingWidget({
 
     prevTop10Ref.current = currentTop10;
   }, [songs, displayScore]);
-
-  useEffect(() => {
-    if (!isRanking || !sessionId) return;
-
-    async function loadSongs(): Promise<void> {
-      setIsLoading(true);
-      try {
-        const detail = await getSessionDetail(sessionId!);
-        if (detail && isMounted.current) {
-          setSongs(detail.songs);
-          setTotalDuels(detail.comparison_count);
-          setConvergence(detail.convergence_score ?? 0);
-          setCurrentPair(getNextPair(detail.songs));
-        }
-      } catch (error) {
-        console.error("Failed to load session songs:", error);
-      } finally {
-        if (isMounted.current) {
-          setIsLoading(false);
-        }
-      }
-    }
-    loadSongs();
-  }, [isRanking, sessionId]);
 
   const handleChoice = useCallback(
     async (winner: SessionSong | null, tie: boolean = false) => {
@@ -236,11 +256,11 @@ export function RankingWidget({
           e.preventDefault();
           handleChoice(currentPair[1]);
           break;
-        case "Space":
+        case "ArrowUp":
           e.preventDefault();
           handleChoice(null, true);
           break;
-        case "Escape":
+        case "ArrowDown":
           e.preventDefault();
           handleSkip();
           break;
@@ -285,7 +305,7 @@ export function RankingWidget({
       <div className="flex flex-col items-center justify-center h-full w-full gap-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
-          Loading Session Data...
+          Loading Ranking Data...
         </p>
     </div>
   );
@@ -293,7 +313,7 @@ export function RankingWidget({
 
 function KeyboardShortcutsHelp(): JSX.Element {
   return (
-    <div className="hidden md:flex flex-col gap-1.5 fixed top-24 right-8 z-40 opacity-40 hover:opacity-100 transition-opacity p-4 rounded-xl bg-background/5 backdrop-blur-sm border border-white/5">
+    <div className="hidden md:flex flex-col gap-1.5 fixed top-24 right-8 z-40 opacity-40 hover:opacity-100 transition-opacity p-4 rounded-xl bg-background/5 backdrop-blur-sm border border-primary/5">
       <div className="flex items-center justify-end gap-3">
         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Select Left</span>
         <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">←</kbd>
@@ -304,11 +324,11 @@ function KeyboardShortcutsHelp(): JSX.Element {
       </div>
       <div className="flex items-center justify-end gap-3">
         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Tie</span>
-        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">Space</kbd>
+        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">↑</kbd>
       </div>
       <div className="flex items-center justify-end gap-3">
         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Skip</span>
-        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">Esc</kbd>
+        <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">↓</kbd>
       </div>
     </div>
   );

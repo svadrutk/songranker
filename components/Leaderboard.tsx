@@ -26,7 +26,7 @@ export function Leaderboard({ songs, onContinue }: LeaderboardProps): JSX.Elemen
         <div className="flex items-center justify-center gap-4 mb-1 md:mb-2">
           <div className="h-[1px] md:h-[2px] w-8 md:w-12 bg-primary/20 rounded-full" />
           <p className="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-[0.2em] md:tracking-[0.3em] font-mono">
-            Session Results
+            Ranking Results
           </p>
           <div className="h-[1px] md:h-[2px] w-8 md:w-12 bg-primary/20 rounded-full" />
         </div>

@@ -23,7 +23,10 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const loadSessions = useCallback(async (showLoading = true) => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     const cacheKey = `sr_sessions_${user.id}`;
     
@@ -90,19 +93,21 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
         <Loader2 className="h-6 w-6 animate-spin" />
-        <p className="text-xs font-mono uppercase tracking-widest">Loading Sessions...</p>
+        <p className="text-xs font-mono uppercase tracking-widest">Loading Rankings...</p>
       </div>
     );
   }
 
   if (sessions.length === 0) {
+    if (!user) return <div className="py-12" />; // Don't show anything if not logged in and not loading
+    
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4 text-center px-4">
         <div className="h-12 w-12 rounded-full bg-muted/20 flex items-center justify-center">
           <History className="h-6 w-6 text-muted-foreground/40" />
         </div>
         <div className="space-y-1">
-          <p className="text-xs font-mono font-bold uppercase text-muted-foreground">No sessions found</p>
+          <p className="text-xs font-mono font-bold uppercase text-muted-foreground">No rankings found</p>
           <p className="text-[10px] text-muted-foreground/60 font-mono">Start a new ranking by searching for an artist.</p>
         </div>
       </div>
@@ -112,7 +117,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
   return (
     <div className="flex flex-col gap-2 pr-2 overflow-y-auto custom-scrollbar">
       <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2">
-        Recent Sessions ({sessions.length})
+        Recent Rankings ({sessions.length})
       </h2>
       <div className="space-y-1">
         {sessions.map((session) => (
@@ -130,14 +135,14 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
             className={cn(
               "w-full group flex flex-col p-3 rounded-md border transition-all text-left relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary",
               activeSessionId === session.session_id
-                ? "border-white bg-white/5 shadow-xs"
+                ? "border-primary bg-primary/5 shadow-xs"
                 : "bg-card border-transparent hover:bg-muted/50 hover:border-border"
             )}
           >
             <div className="flex items-center justify-between mb-1.5">
               <span className={cn(
                 "font-mono text-xs font-bold truncate flex-1",
-                activeSessionId === session.session_id ? "text-white" : ""
+                activeSessionId === session.session_id ? "text-primary" : ""
               )}>
                 {session.primary_artist}
               </span>
@@ -148,7 +153,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
                   <button
                     onClick={(e) => handleDeleteClick(e, session.session_id)}
                     className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground/40 hover:text-destructive transition-colors"
-                    title="Delete Session"
+                    title="Delete Ranking"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -245,7 +250,7 @@ function DeleteConfirmationModal({
               <div className="space-y-2 mb-8">
                 <h3 className="text-xl font-black tracking-tight uppercase italic">Confirm Deletion</h3>
                 <p className="text-sm text-muted-foreground font-mono leading-relaxed">
-                  Permanently remove session for <span className="text-foreground font-bold">{artistName}</span>? This cannot be undone.
+                  Permanently remove ranking for <span className="text-foreground font-bold">{artistName}</span>? This cannot be undone.
                 </p>
               </div>
 
@@ -273,4 +278,3 @@ function DeleteConfirmationModal({
     document.body
   );
 }
-

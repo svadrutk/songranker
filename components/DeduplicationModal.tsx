@@ -86,7 +86,7 @@ export function DeduplicationModal({
                     </div>
                     
                     <div className="space-y-1">
-                      <p className="text-sm font-bold font-mono text-white flex items-center gap-2">
+                      <p className="text-sm font-bold font-mono text-foreground flex items-center gap-2">
                         <Check className="h-3 w-3 text-green-500" />
                         {group.canonical}
                       </p>

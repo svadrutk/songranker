@@ -93,7 +93,7 @@ export function RankingCard({
       </div>
 
       {/* Interactive Overlay */}
-      <div className="absolute inset-0 ring-1 ring-inset ring-white/5 pointer-events-none" />
+      <div className="absolute inset-0 ring-1 ring-inset ring-primary/5 pointer-events-none" />
     </motion.button>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type JSX } from "react";
+import { useState, useRef, type JSX } from "react";
 import { Share2, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import confetti from "canvas-confetti";
@@ -14,25 +14,67 @@ type ShareButtonProps = {
 
 export function ShareButton({ songs }: ShareButtonProps): JSX.Element {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [localSongs, setLocalSongs] = useState<SessionSong[]>(songs);
+  
+  // Stable refs for export metadata
+  const metadataRef = useRef({
+    orderId: 0,
+    dateStr: "",
+    timeStr: ""
+  });
+
+  const prepareImages = async () => {
+    const updatedSongs = await Promise.all(
+      songs.map(async (song) => {
+        if (!song.cover_url || song.cover_url.startsWith('blob:')) return song;
+        
+        try {
+          const response = await fetch(song.cover_url, { mode: 'cors' });
+          if (!response.ok) throw new Error('Failed to fetch image');
+          const blob = await response.blob();
+          const localUrl = URL.createObjectURL(blob);
+          return { ...song, cover_url: localUrl };
+        } catch (error) {
+          console.error(`Failed to load image for ${song.name}:`, error);
+          return song;
+        }
+      })
+    );
+    setLocalSongs(updatedSongs);
+    return updatedSongs;
+  };
 
   const handleShare = async () => {
     if (isGenerating) return;
     setIsGenerating(true);
 
-    // Give a small delay for the off-screen element to be ready
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Set stable metadata for this specific share action
+    const now = new Date();
+    const seed = songs.length > 0 ? songs[0].song_id.length : 1234;
+    metadataRef.current = {
+      orderId: Math.floor((Math.sin(seed) * 0.5 + 0.5) * 9000) + 1000,
+      dateStr: now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }),
+      timeStr: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    };
 
-    const element = document.getElementById("share-visual");
-    if (!element) {
-      setIsGenerating(false);
-      return;
-    }
+    let preparedSongs: SessionSong[] = [];
 
     try {
+      // 1. Prepare images
+      preparedSongs = await prepareImages();
+      
+      // 2. Wait for images to load in the hidden DOM
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const element = document.getElementById("share-visual");
+      if (!element) throw new Error("Share visual element not found");
+
       const dataUrl = await toPng(element, {
-        quality: 0.95,
-        cacheBust: true,
-        pixelRatio: 2, // High resolution
+        quality: 1.0,
+        cacheBust: false,
+        pixelRatio: 2, 
+        height: element.scrollHeight,
+        width: 1080,
       });
 
       // Trigger confetti
@@ -46,25 +88,29 @@ export function ShareButton({ songs }: ShareButtonProps): JSX.Element {
       // Convert dataUrl to blob for sharing
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const file = new File([blob], "my-top-10.png", { type: "image/png" });
+      const file = new File([blob], "song-ranker-top-10.png", { type: "image/png" });
 
-      // Check for Web Share API
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: "My Top 10 Songs",
-          text: "Check out my definitive top 10 songs on Song Ranker!",
+          text: "My definitive rankings from SongRanker.app",
         });
       } else {
-        // Fallback to download
         const link = document.createElement("a");
-        link.download = "my-top-10.png";
+        link.download = "song-ranker-top-10.png";
         link.href = dataUrl;
         link.click();
       }
     } catch (error) {
       console.error("Failed to generate share image:", error);
     } finally {
+      // Robust cleanup of blob URLs to prevent memory leaks
+      preparedSongs.forEach(song => {
+        if (song.cover_url?.startsWith('blob:')) {
+          URL.revokeObjectURL(song.cover_url);
+        }
+      });
       setIsGenerating(false);
     }
   };
@@ -81,16 +127,25 @@ export function ShareButton({ songs }: ShareButtonProps): JSX.Element {
         ) : (
           <Share2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
         )}
-        {isGenerating ? "Generating..." : "Share Rankings"}
+        {isGenerating ? "Exporting..." : "Export Rankings"}
         
         {!isGenerating && (
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
         )}
       </Button>
 
       {/* Hidden container for image generation */}
-      <div className="fixed left-[-9999px] top-[-9999px]" aria-hidden="true">
-        <ShareVisual songs={songs} />
+      <div 
+        className="fixed pointer-events-none overflow-hidden" 
+        style={{ left: '-9999px', top: '0', width: '1080px' }} 
+        aria-hidden="true"
+      >
+        <ShareVisual 
+          songs={localSongs} 
+          orderId={metadataRef.current.orderId}
+          dateStr={metadataRef.current.dateStr}
+          timeStr={metadataRef.current.timeStr}
+        />
       </div>
     </>
   );
