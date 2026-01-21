@@ -8,15 +8,21 @@ export const runtime = 'nodejs'; // Use nodejs runtime for file system access
 
 // Font loading logic
 async function loadFonts() {
-  const blackPath = path.join(process.cwd(), 'public/fonts/Geist-Black.woff2');
-  const monoBoldPath = path.join(process.cwd(), 'public/fonts/GeistMono-Bold.woff2');
-  
-  const [blackData, monoBoldData] = await Promise.all([
-    fs.readFile(blackPath),
-    fs.readFile(monoBoldPath),
-  ]);
-
-  return { blackData, monoBoldData };
+  try {
+    // Switch to static Roboto fonts to avoid Satori variable font crash
+    const blackPath = path.join(process.cwd(), 'public/fonts/Roboto-Black.ttf');
+    const monoBoldPath = path.join(process.cwd(), 'public/fonts/RobotoMono-Bold.ttf');
+    
+    const [blackData, monoBoldData] = await Promise.all([
+      fs.readFile(blackPath),
+      fs.readFile(monoBoldPath),
+    ]);
+    
+    return { blackData, monoBoldData };
+  } catch (error) {
+    console.error('Font loading failed:', error);
+    throw new Error('Failed to load fonts');
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -24,6 +30,7 @@ export async function POST(req: NextRequest) {
     const { songs, orderId, dateStr, timeStr } = await req.json();
     const top10 = songs.slice(0, 10);
     const { blackData, monoBoldData } = await loadFonts();
+    console.log(`[API] Fonts loaded: Black (${blackData.length} bytes), Mono (${monoBoldData.length} bytes)`);
 
     // Calculate barcode pattern (stable based on songs)
     const seed = top10.reduce((acc: number, s: SessionSong) => acc + s.name.length, 0);
@@ -44,7 +51,7 @@ export async function POST(req: NextRequest) {
             justifyContent: 'flex-start',
             backgroundColor: '#000000',
             padding: '80px',
-            fontFamily: '"GeistMono"',
+            fontFamily: '"RobotoMono"',
           }}
         >
           {/* Receipt Paper */}
@@ -101,7 +108,7 @@ export async function POST(req: NextRequest) {
               <div
                 style={{
                   fontSize: '60px',
-                  fontFamily: '"GeistBlack"',
+                  fontFamily: '"RobotoBlack"',
                   textTransform: 'uppercase',
                   marginBottom: '16px',
                   letterSpacing: '-2px',
@@ -116,7 +123,7 @@ export async function POST(req: NextRequest) {
                   display: 'flex',
                   flexDirection: 'column',
                   fontSize: '24px',
-                  fontFamily: '"GeistMono"',
+                  fontFamily: '"RobotoMono"',
                   fontWeight: 700,
                   color: 'rgba(255,255,255,0.4)',
                   alignItems: 'center',
@@ -144,7 +151,7 @@ export async function POST(req: NextRequest) {
                   borderBottom: '2px solid rgba(255,255,255,0.05)',
                   paddingBottom: '24px',
                   marginBottom: '40px',
-                  fontFamily: '"GeistMono"',
+                  fontFamily: '"RobotoMono"',
                   fontWeight: 700,
                   color: '#ffffff',
                   width: '100%',
@@ -188,7 +195,7 @@ export async function POST(req: NextRequest) {
                         <span
                           style={{
                             fontSize: '36px',
-                            fontFamily: '"GeistMono"',
+                            fontFamily: '"RobotoMono"',
                             color: 'rgba(255,255,255,0.2)',
                             width: '48px',
                             flexShrink: 0,
@@ -200,7 +207,7 @@ export async function POST(req: NextRequest) {
                           <p
                             style={{
                               fontSize: '36px',
-                              fontFamily: '"GeistBlack"',
+                              fontFamily: '"RobotoBlack"',
                               textTransform: 'uppercase',
                               letterSpacing: '-1px',
                               margin: 0,
@@ -217,7 +224,7 @@ export async function POST(req: NextRequest) {
                           <p
                             style={{
                               fontSize: '24px',
-                              fontFamily: '"GeistMono"',
+                              fontFamily: '"RobotoMono"',
                               textTransform: 'uppercase',
                               letterSpacing: '2px',
                               color: 'rgba(255,255,255,0.4)',
@@ -236,7 +243,7 @@ export async function POST(req: NextRequest) {
                     <span
                       style={{
                         fontSize: '30px',
-                        fontFamily: '"GeistMono"',
+                        fontFamily: '"RobotoMono"',
                         color: 'rgba(255,255,255,0.2)',
                         flexShrink: 0,
                         marginLeft: '32px',
@@ -265,7 +272,7 @@ export async function POST(req: NextRequest) {
                     <div
                       key={i}
                       style={{
-                        flex: bar.width,
+                        flexGrow: bar.width,
                         backgroundColor: bar.visible ? 'rgba(255,255,255,0.9)' : 'transparent',
                       }}
                     />
@@ -275,7 +282,7 @@ export async function POST(req: NextRequest) {
                   style={{
                     textAlign: 'center',
                     fontSize: '24px',
-                    fontFamily: '"GeistMono"',
+                    fontFamily: '"RobotoMono"',
                     color: 'rgba(255,255,255,0.2)',
                     letterSpacing: '10px',
                     marginLeft: '10px',
@@ -295,13 +302,13 @@ export async function POST(req: NextRequest) {
         height: 1200, // Approximate height, Satori handles flex
         fonts: [
           {
-            name: 'GeistBlack',
+            name: 'RobotoBlack',
             data: blackData,
             weight: 900,
             style: 'normal',
           },
           {
-            name: 'GeistMono',
+            name: 'RobotoMono',
             data: monoBoldData,
             weight: 700,
             style: 'normal',
