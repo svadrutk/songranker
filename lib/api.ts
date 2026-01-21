@@ -80,16 +80,14 @@ export type ComparisonCreate = {
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
-// Log backend URL on module load
-console.log('[API] Backend URL configured as:', BACKEND_URL);
-console.log('[API] User agent:', typeof navigator !== 'undefined' ? navigator.userAgent : 'SSR');
-
 // Helper to show errors visually
 function triggerErrorBanner(message: string) {
   if (typeof window !== 'undefined') {
     // Dynamic import to avoid SSR issues
     import('@/components/ErrorBanner').then(({ showError }) => {
       showError(message);
+    }).catch((err) => {
+      console.error('[API] Failed to show error banner:', err);
     });
   }
 }
