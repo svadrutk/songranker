@@ -38,11 +38,13 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
     if (cachedData) {
       try {
         const parsed = JSON.parse(cachedData);
+        console.log(`[SessionSelector] Loaded ${parsed.length} sessions from cache`);
         setSessions(parsed);
         // If we have cache, we don't necessarily need to show the main loader
         if (showLoading) setLoading(false);
       } catch (e) {
-        console.error("Failed to parse cached sessions:", e);
+        console.error("[SessionSelector] Failed to parse cached sessions, clearing cache:", e);
+        localStorage.removeItem(cacheKey);
       }
     } else if (showLoading) {
       setLoading(true);
@@ -53,11 +55,28 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
       console.log('[SessionSelector] Fetching sessions from API...');
       const data = await getUserSessions(user.id);
       console.log(`[SessionSelector] Received ${data.length} sessions`);
+      
+      // Validate data before caching
+      if (!Array.isArray(data)) {
+        console.error('[SessionSelector] API returned non-array data:', data);
+        throw new Error('Invalid session data from API');
+      }
+      
       setSessions(data);
-      localStorage.setItem(cacheKey, JSON.stringify(data));
-      console.log('[SessionSelector] Sessions cached successfully');
+      
+      // Only cache if we got valid data
+      if (data.length > 0) {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        console.log('[SessionSelector] Sessions cached successfully');
+      } else {
+        console.log('[SessionSelector] No sessions to cache');
+        // Clear cache if API returned empty array (user might have deleted all sessions)
+        localStorage.removeItem(cacheKey);
+      }
     } catch (error) {
       console.error("[SessionSelector] Failed to load sessions:", error);
+      // On error, clear cache to prevent stale data
+      localStorage.removeItem(cacheKey);
     } finally {
       setLoading(false);
     }
