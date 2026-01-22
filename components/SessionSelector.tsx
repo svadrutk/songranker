@@ -43,7 +43,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
           setSessions(parsed);
           if (showLoading) setLoading(false);
         }
-      } catch (e) {
+      } catch {
         localStorage.removeItem(cacheKey);
       }
     } else if (showLoading) {
@@ -278,7 +278,8 @@ function DeleteConfirmationModal({
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    const timer = setTimeout(() => setIsMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!isMounted) return null;
