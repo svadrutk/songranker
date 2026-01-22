@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, type SessionSong } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
 import { calculateNewRatings } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check, Sparkles } from "lucide-react";
+import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check, Sparkles, Sword } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { RankingCard } from "@/components/RankingCard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -35,6 +35,7 @@ export function RankingWidget({
   const [isTie, setIsTie] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [showRankUpdate, setShowRankUpdate] = useState(false);
+  const [showProgressHint, setShowProgressHint] = useState(false);
 
   useEffect(() => {
     isMounted.current = true;
@@ -120,6 +121,18 @@ export function RankingWidget({
 
     prevTop10Ref.current = currentTop10;
   }, [songs, displayScore]);
+
+  // Detect when progress is stuck at 40% and show hint after delay
+  useEffect(() => {
+    if (displayScore === 40 && quantityProgress >= 40) {
+      const timer = setTimeout(() => {
+        setShowProgressHint(true);
+      }, 4000); // 4 second delay
+      return () => clearTimeout(timer);
+    } else {
+      setShowProgressHint(false);
+    }
+  }, [displayScore, quantityProgress]);
 
   const handleChoice = useCallback(
     async (winner: SessionSong | null, tie: boolean = false) => {
@@ -410,9 +423,25 @@ function KeyboardShortcutsHelp(): JSX.Element {
               animate={{ width: `${displayScore}%` }}
               transition={{ duration: 0.5, ease: "easeOut" }}
             />
-          </div>
-          
-          <AnimatePresence>
+           </div>
+
+           <AnimatePresence>
+             {showProgressHint && displayScore === 40 && (
+               <motion.div
+                 initial={{ opacity: 0, y: -5 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: -5 }}
+                 className="flex items-center justify-center gap-2 pt-1"
+               >
+                 <Sword className="h-3 w-3 text-primary/50 animate-pulse" />
+                 <p className="text-[9px] md:text-[10px] font-mono text-muted-foreground/70">
+                   Keep battling! A few more duels will refine your rankings...
+                 </p>
+               </motion.div>
+             )}
+           </AnimatePresence>
+
+           <AnimatePresence>
             {displayScore >= 90 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
