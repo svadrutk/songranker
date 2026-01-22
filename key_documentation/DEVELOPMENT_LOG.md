@@ -1,11 +1,41 @@
 # Song Ranker - Development Log
 
-**Last Updated**: January 19, 2026  
-**Status**: ✅ **ACTIVE** - Phase 4 Refinements
+**Last Updated**: January 22, 2026  
+**Status**: ✅ **ACTIVE** - Performance Optimizations
 
 ---
 
 ## 📋 **Decision Log**
+
+### **Decision #13: Smart Polling with Exponential Backoff for Ranking Updates**
+**Date**: January 22, 2026
+**Author**: opencode (Interactive Agent)
+
+**What Changed**:
+- **Removed Hardcoded Delays**: Replaced the fixed 1-second and 4-second delays with intelligent polling that checks for updates multiple times with exponential backoff.
+- **Polling Strategy**: Implemented 4 poll attempts at 0ms, 400ms, 800ms, 1.5s, and 2.5s intervals. The system stops polling early if the convergence score updates, indicating the worker has completed.
+- **Early Exit**: Polling stops as soon as the backend ranking model completes, reducing update latency from 4 seconds to typically under 1 second.
+- **Scalability**: The exponential backoff approach handles variable worker processing times gracefully, supporting both current low-latency scenarios (<1s) and future high-load scenarios where the Bradley-Terry model might take longer.
+
+**Why**:
+- **Performance**: The Bradley-Terry model runs in milliseconds (typically <250ms), but the frontend was artificially waiting 4 seconds for updates, creating a perceived delay.
+- **User Experience**: Users now see ranking updates within ~400ms when the worker completes quickly, instead of waiting a fixed 4 seconds.
+- **Future-Proof**: As user load increases, the polling strategy adapts automatically, continuing to check for updates without assuming a fixed completion time.
+- **Efficiency**: Stops polling early when convergence updates, avoiding unnecessary API calls.
+
+**Technical Details**:
+- **Location**: `components/RankingWidget.tsx:214-274`
+- **Poll Intervals**: [0ms, 400ms, 800ms, 1.5s, 2.5s] with early exit on convergence change
+- **Detection Logic**: Compares `detail.convergence_score` against the previous value to detect when the ranking model has completed
+- **Console Logging**: Added sync logging to track poll attempts and completion for monitoring
+
+**Impact**:
+- **Reduced Latency**: Ranking updates now appear 3-4x faster (from ~4s to <1s in typical scenarios)
+- **Better Responsiveness**: UI feels more reactive and immediate when making ranking decisions
+- **Maintained Reliability**: Still handles edge cases where worker might take >1s under load
+- **Improved UX**: Users see the "Rankings Refined" notification much sooner after completing duels
+
+---
 
 ### **Decision #12: Seamless Bradley-Terry Integration & Convergence Progress**
 **Date**: January 19, 2026

@@ -41,6 +41,7 @@ export function RankingWidget({
   const blurTimeRef = useRef<number | null>(null);
   const peekStartTimeRef = useRef<number | null>(null);
   const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previousConvergenceRef = useRef<number>(0);
 
   useEffect(() => {
     const handleBlur = () => {
@@ -93,6 +94,11 @@ export function RankingWidget({
     };
   }, []);
 
+  // Sync convergence ref whenever convergence state updates
+  useEffect(() => {
+    previousConvergenceRef.current = convergence;
+  }, [convergence]);
+
   useEffect(() => {
     if (!isRanking || !sessionId) return;
 
@@ -108,6 +114,7 @@ export function RankingWidget({
     setShowRankUpdate(false);
     if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
     prevTop10Ref.current = [];
+    previousConvergenceRef.current = 0;
 
     let isCurrent = true;
 
@@ -212,40 +219,72 @@ export function RankingWidget({
           }
 
           if (response.sync_queued) {
-            const syncData = async () => {
+            const pollForUpdate = async () => {
               if (!isMounted.current) return;
-              try {
-                const detail = await getSessionDetail(sessionId);
-                if (detail && isMounted.current) {
-                  if (detail.songs && detail.songs.length > 0) {
-                    setSongs(prevSongs => {
-                      return detail.songs.map(backendSong => {
-                        const isCurrent = currentPair.some(p => p.song_id === backendSong.song_id);
-                        if (isCurrent) {
-                          const local = prevSongs.find(s => s.song_id === backendSong.song_id);
-                          return { ...backendSong, local_elo: local?.local_elo ?? backendSong.local_elo };
-                        }
-                        return backendSong;
-                      });
-                    });
-                  }
-                  
-                  const detailScore = detail.convergence_score ?? 0;
-                  setConvergence(prev => {
-                    if (detailScore > prev && detailScore >= 90) {
-                      triggerRankUpdateNotification();
-                    }
-                    return Math.max(prev, detailScore);
-                  });
-                  setTotalDuels(prev => Math.max(prev, detail.comparison_count));
+              
+              const maxAttempts = 4; // Try up to 4 times
+              const delays = [400, 800, 1500, 2500]; // Exponential backoff: 400ms, 800ms, 1.5s, 2.5s
+              
+              // Track the baseline convergence to detect updates
+              let previousConvergence = previousConvergenceRef.current;
+              
+              for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                if (!isMounted.current) return;
+                
+                // Wait before fetching (skip delay on first attempt for immediate check)
+                if (attempt > 0) {
+                  await new Promise(resolve => setTimeout(resolve, delays[attempt - 1]));
                 }
-              } catch (error) {
-                console.error("Background sync failed:", error);
+                
+                try {
+                  const detail = await getSessionDetail(sessionId);
+                  if (detail && isMounted.current) {
+                    if (detail.songs && detail.songs.length > 0) {
+                      setSongs(prevSongs => {
+                        return detail.songs.map(backendSong => {
+                          const isCurrent = currentPair.some(p => p.song_id === backendSong.song_id);
+                          if (isCurrent) {
+                            const local = prevSongs.find(s => s.song_id === backendSong.song_id);
+                            return { ...backendSong, local_elo: local?.local_elo ?? backendSong.local_elo };
+                          }
+                          return backendSong;
+                        });
+                      });
+                    }
+                    
+                    const detailScore = detail.convergence_score ?? 0;
+                    
+                    // Check if convergence score has actually updated
+                    if (detailScore > previousConvergence) {
+                      setConvergence(prev => {
+                        if (detailScore > prev && detailScore >= 90) {
+                          triggerRankUpdateNotification();
+                        }
+                        return Math.max(prev, detailScore);
+                      });
+                      setTotalDuels(prev => Math.max(prev, detail.comparison_count));
+                      
+                      // Update the tracking ref and local variable for next iteration
+                      previousConvergenceRef.current = detailScore;
+                      previousConvergence = detailScore;
+                      
+                      console.log(`[Sync] Rankings updated after ${attempt + 1} poll(s)`);
+                      return; // Success - stop polling
+                    }
+                    
+                    // Update state even if convergence didn't change (bt_strength might have)
+                    setTotalDuels(prev => Math.max(prev, detail.comparison_count));
+                  }
+                } catch (error) {
+                  console.error(`[Sync] Poll attempt ${attempt + 1} failed:`, error);
+                }
               }
+              
+              console.log(`[Sync] Polling completed after ${maxAttempts} attempts`);
             };
 
-            setTimeout(syncData, 1000);
-            setTimeout(syncData, 4000);
+            // Start polling immediately (first check happens without delay)
+            pollForUpdate();
           }
         }
       } catch (error) {
