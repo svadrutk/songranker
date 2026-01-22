@@ -147,7 +147,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
               }
             }}
             className={cn(
-              "w-full group flex items-center gap-3 p-3 rounded-md border transition-all text-left relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary overflow-hidden",
+              "w-full group flex items-center gap-3 pt-3 px-3 pb-4 rounded-md border transition-all text-left relative cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary overflow-hidden",
               activeSessionId === session.session_id
                 ? "border-primary/40 bg-primary/5 shadow-xs"
                 : "bg-card border-transparent hover:bg-muted/50 hover:border-border"
@@ -176,7 +176,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
                       alt="Album cover"
                       width={40}
                       height={40}
-                      className="absolute left-2 top-2 w-full h-full object-cover shadow-sm border-2 border-background z-0"
+                      className="absolute left-1.5 top-1.5 w-full h-full object-cover shadow-sm border-2 border-background z-0"
                       onError={() => setImageErrors(prev => ({ ...prev, [session.session_id]: true }))}
                       unoptimized
                     />
