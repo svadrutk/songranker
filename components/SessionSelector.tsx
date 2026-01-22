@@ -207,7 +207,7 @@ export function SessionSelector({ onSelect, onDelete, activeSessionId }: Session
                   )}
                   {(session.convergence_score || 0) >= 90 ? (
                     <CheckCircle2 className={cn(
-                      "h-4 w-4 text-green-500 transition-transform group-hover:scale-110 shadow-[0_0_10px_rgba(34,197,94,0.2)]",
+                      "h-4 w-4 text-green-500 transition-transform group-hover:scale-110",
                       activeSessionId === session.session_id ? "opacity-100" : "opacity-80"
                     )} />
                   ) : (
