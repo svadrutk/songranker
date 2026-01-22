@@ -2,18 +2,20 @@
 
 import type { JSX } from "react";
 import { motion } from "framer-motion";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
 import { ShareButton } from "@/components/ShareButton";
+import { cn } from "@/lib/utils";
 import type { SessionSong } from "@/lib/api";
 
 type LeaderboardProps = {
   songs: SessionSong[];
   onContinue: () => void;
+  isPreview?: boolean;
 };
 
-export function Leaderboard({ songs, onContinue }: LeaderboardProps): JSX.Element {
+export function Leaderboard({ songs, onContinue, isPreview }: LeaderboardProps): JSX.Element {
   const sortedSongs = [...songs].sort((a, b) => {
     const scoreA = a.bt_strength ?? (a.local_elo / 3000); 
     const scoreB = b.bt_strength ?? (b.local_elo / 3000);
@@ -21,17 +23,20 @@ export function Leaderboard({ songs, onContinue }: LeaderboardProps): JSX.Elemen
   });
 
   return (
-    <div className="flex flex-col items-center justify-start h-full w-full gap-4 max-w-4xl mx-auto py-4 md:py-8 overflow-hidden">
+    <div className={cn(
+      "flex flex-col items-center justify-start h-full w-full gap-4 max-w-4xl mx-auto py-4 md:py-8 overflow-hidden",
+      isPreview && "px-4"
+    )}>
       <div className="text-center space-y-2 md:space-y-4 shrink-0">
         <div className="flex items-center justify-center gap-4 mb-1 md:mb-2">
           <div className="h-[1px] md:h-[2px] w-8 md:w-12 bg-primary/20 rounded-full" />
           <p className="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-[0.2em] md:tracking-[0.3em] font-mono">
-            Ranking Results
+            {isPreview ? "Current Standings" : "Ranking Results"}
           </p>
           <div className="h-[1px] md:h-[2px] w-8 md:w-12 bg-primary/20 rounded-full" />
         </div>
         <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase italic">
-          Your Favorite Tracks
+          {isPreview ? "The Order So Far" : "Your Favorite Tracks"}
         </h2>
       </div>
 
@@ -69,16 +74,27 @@ export function Leaderboard({ songs, onContinue }: LeaderboardProps): JSX.Elemen
         <div className="flex gap-4">
           <Button
             onClick={onContinue}
-            variant="outline"
+            variant={isPreview ? "default" : "outline"}
             className="px-8 md:px-12 py-5 md:py-6 rounded-xl font-mono uppercase tracking-widest text-[10px] md:text-xs font-black"
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Keep Ranking
+            {isPreview ? (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Return to Duel
+              </>
+            ) : (
+              <>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Keep Ranking
+              </>
+            )}
           </Button>
-          <ShareButton songs={sortedSongs} />
+          {!isPreview && <ShareButton songs={sortedSongs} />}
         </div>
         <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest text-center max-w-sm">
-          Rankings become more accurate the more you duel.
+          {isPreview 
+            ? "These rankings will shift as you continue dueling." 
+            : "Rankings become more accurate the more you duel."}
         </p>
       </div>
     </div>

@@ -80,6 +80,7 @@ export type ComparisonCreate = {
   song_b_id: string;
   winner_id: string | null;
   is_tie: boolean;
+  decision_time_ms?: number;
 };
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";

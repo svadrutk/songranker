@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, type SessionSong } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
-import { calculateNewRatings } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check, Sword, ChartNetwork } from "lucide-react";
+import { calculateNewRatings, calculateKFactor } from "@/lib/elo";
+import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check, Sword, ChartNetwork, Eye } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { RankingCard } from "@/components/RankingCard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -36,7 +36,46 @@ export function RankingWidget({
   const [isSkipping, setIsSkipping] = useState(false);
   const [showRankUpdate, setShowRankUpdate] = useState(false);
   const [showProgressHint, setShowProgressHint] = useState(false);
+  const [showPeek, setShowPeek] = useState(false);
+  const lastPairLoadTime = useRef<number>(Date.now());
+  const blurTimeRef = useRef<number | null>(null);
+  const peekStartTimeRef = useRef<number | null>(null);
   const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleBlur = () => {
+      console.log("[Timer] Window blurred. Pausing timer...");
+      blurTimeRef.current = Date.now();
+    };
+    const handleFocus = () => {
+      if (blurTimeRef.current) {
+        const pauseDuration = Date.now() - blurTimeRef.current;
+        console.log(`[Timer] Window focused. Resumed. Paused for ${pauseDuration}ms`);
+        lastPairLoadTime.current += pauseDuration;
+        blurTimeRef.current = null;
+      }
+    };
+
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
+  // Pause timer when peeking
+  useEffect(() => {
+    if (showPeek) {
+      console.log("[Timer] Peek started. Pausing timer...");
+      peekStartTimeRef.current = Date.now();
+    } else if (peekStartTimeRef.current) {
+      const peekDuration = Date.now() - peekStartTimeRef.current;
+      console.log(`[Timer] Peek ended. Resumed. Paused for ${peekDuration}ms`);
+      lastPairLoadTime.current += peekDuration;
+      peekStartTimeRef.current = null;
+    }
+  }, [showPeek]);
 
   const triggerRankUpdateNotification = useCallback(() => {
     if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
@@ -81,6 +120,7 @@ export function RankingWidget({
           setTotalDuels(detail.comparison_count);
           setConvergence(detail.convergence_score ?? 0);
           setCurrentPair(getNextPair(detail.songs));
+          lastPairLoadTime.current = Date.now();
         }
       } catch (error) {
         if (isCurrent) {
@@ -126,10 +166,14 @@ export function RankingWidget({
       setWinnerId(wId);
       setIsTie(tie);
 
+      const decisionTime = Date.now() - lastPairLoadTime.current;
+      const kFactor = calculateKFactor(decisionTime);
+      console.log(`[Timer] Final Decision Time: ${decisionTime}ms (K-Factor: ${kFactor})`);
+
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       const scoreA = tie ? 0.5 : wId === songA.song_id ? 1 : 0;
-      const [newEloA, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, scoreA);
+      const [newEloA, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, scoreA, kFactor);
 
       setSongs((prevSongs) => {
         const updated = prevSongs.map((s) => {
@@ -139,6 +183,7 @@ export function RankingWidget({
         });
 
         setCurrentPair(getNextPair(updated));
+        lastPairLoadTime.current = Date.now();
         return updated;
       });
 
@@ -152,6 +197,7 @@ export function RankingWidget({
           song_b_id: songB.song_id,
           winner_id: wId,
           is_tie: tie,
+          decision_time_ms: decisionTime,
         });
 
         if (response.success) {
@@ -213,6 +259,7 @@ export function RankingWidget({
     if (!currentPair || !sessionId) return;
     
     setIsSkipping(true);
+    const decisionTime = Date.now() - lastPairLoadTime.current;
     // Short delay for visual feedback
     await new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -222,15 +269,17 @@ export function RankingWidget({
     const [newEloA] = calculateNewRatings(songA.local_elo, songB.local_elo, 0);
     const [, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, 1);
 
-    setSongs((prevSongs) => {
-      const updated = prevSongs.map((s) => {
-        if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
-        if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
-        return s;
+      setSongs((prevSongs) => {
+        const updated = prevSongs.map((s) => {
+          if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
+          if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
+          return s;
+        });
+        setCurrentPair(getNextPair(updated));
+        lastPairLoadTime.current = Date.now();
+        return updated;
       });
-      setCurrentPair(getNextPair(updated));
-      return updated;
-    });
+
 
     setTotalDuels((prev) => prev + 1);
     setIsSkipping(false);
@@ -241,7 +290,9 @@ export function RankingWidget({
       song_b_id: songB.song_id,
       winner_id: null,
       is_tie: false,
+      decision_time_ms: decisionTime,
     }).catch(err => console.error("Failed to record skip:", err));
+
 
   }, [currentPair, sessionId]);
 
@@ -354,6 +405,30 @@ function KeyboardShortcutsHelp(): JSX.Element {
       <KeyboardShortcutsHelp />
       
       <AnimatePresence>
+        {showPeek && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-xl flex items-center justify-center p-4 md:p-8"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full h-full max-w-5xl bg-background border border-primary/10 rounded-[2rem] shadow-2xl overflow-hidden relative"
+            >
+              <Leaderboard 
+                songs={songs} 
+                onContinue={() => setShowPeek(false)} 
+                isPreview 
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showRankUpdate && (
           <motion.div
             initial={{ opacity: 0, x: 20, y: -10 }}
@@ -440,24 +515,36 @@ function KeyboardShortcutsHelp(): JSX.Element {
              )}
            </AnimatePresence>
 
-           <AnimatePresence>
-            {displayScore >= 90 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex justify-center pt-2 md:pt-4"
-              >
-                <Button 
-                  onClick={() => setIsFinished(true)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-widest text-[10px] md:text-[11px] font-black py-3 md:py-4 px-6 md:px-8 rounded-xl group"
-                >
-                  <Check className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                  View Results
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <AnimatePresence>
+             {(displayScore >= 90 || totalDuels >= 15) && (
+               <motion.div
+                 initial={{ opacity: 0, y: 10 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 exit={{ opacity: 0, y: -10 }}
+                 className="flex justify-center gap-3 pt-2 md:pt-4"
+               >
+                 {displayScore >= 90 ? (
+                   <Button 
+                     onClick={() => setIsFinished(true)}
+                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-widest text-[10px] md:text-[11px] font-black py-3 md:py-4 px-6 md:px-8 rounded-xl group"
+                   >
+                     <Check className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+                     View Results
+                   </Button>
+                 ) : (
+                   <Button 
+                     onClick={() => setShowPeek(true)}
+                     variant="outline"
+                     className="border-primary/20 hover:border-primary/40 text-muted-foreground hover:text-primary font-mono uppercase tracking-widest text-[9px] md:text-[10px] font-black py-2 md:py-3 px-4 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
+                   >
+                     <Eye className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                     Peek Rankings
+                   </Button>
+                 )}
+               </motion.div>
+             )}
+           </AnimatePresence>
+
         </div>
 
         {/* Duel Area */}
