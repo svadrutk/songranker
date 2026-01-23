@@ -305,10 +305,7 @@ function DeleteConfirmationModal({
             <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 bg-destructive/5 rounded-full blur-3xl" />
             
             <div className="relative">
-              <div className="flex items-center justify-between mb-6">
-                <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                </div>
+              <div className="flex justify-end mb-4">
                 <button 
                   onClick={onClose}
                   className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
@@ -317,8 +314,14 @@ function DeleteConfirmationModal({
                 </button>
               </div>
 
-              <div className="space-y-2 mb-8">
-                <h3 className="text-xl font-black tracking-tight uppercase italic">Confirm Deletion</h3>
+              <div className="flex justify-center mb-6">
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-8 text-center">
+                <h3 className="text-xl font-mono font-bold uppercase tracking-tight">Confirm Deletion</h3>
                 <p className="text-sm text-muted-foreground font-mono leading-relaxed">
                   Permanently remove ranking for <span className="text-foreground font-bold">{artistName}</span>? This cannot be undone.
                 </p>
