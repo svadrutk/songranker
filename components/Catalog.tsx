@@ -1,16 +1,24 @@
 "use client";
 
-import { useState, useMemo, type JSX } from "react";
-import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X, Lock, History } from "lucide-react";
+import { useState, useMemo, useEffect, type JSX } from "react";
+import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X, Lock, History, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
-import { searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup } from "@/lib/api";
+import { 
+  searchArtistReleaseGroups, 
+  getReleaseGroupTracks, 
+  getGlobalLeaderboard,
+  getLeaderboardStats,
+  type ReleaseGroup,
+  type LeaderboardResponse
+} from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { SessionSelector } from "@/components/SessionSelector";
+import { GlobalLeaderboard } from "@/components/GlobalLeaderboard";
 import { cn } from "@/lib/utils";
 
 type ReleaseType = "Album" | "EP" | "Single" | "Other";
-type CatalogView = "search" | "rankings";
+type CatalogView = "search" | "rankings" | "global";
 
 function LoadingSkeleton(): JSX.Element {
   return (
@@ -57,7 +65,7 @@ function ViewToggle({ view, setView }: ViewToggleProps): JSX.Element {
         )}
       >
         <Search className="h-3 w-3" />
-        Search
+        <span className="hidden sm:inline">Search</span>
       </button>
       <button
         onClick={() => setView("rankings")}
@@ -67,7 +75,19 @@ function ViewToggle({ view, setView }: ViewToggleProps): JSX.Element {
         )}
       >
         <History className="h-3 w-3" />
-        My Rankings
+        <span className="hidden sm:inline">My Rankings</span>
+        <span className="sm:hidden">Rankings</span>
+      </button>
+      <button
+        onClick={() => setView("global")}
+        className={cn(
+          "flex-1 flex items-center justify-center gap-2 py-2 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
+          view === "global" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <Globe className="h-3 w-3" />
+        <span className="hidden sm:inline">Global</span>
+        <span className="sm:hidden">Global</span>
       </button>
     </div>
   );
@@ -84,6 +104,8 @@ export function Catalog({
 }: CatalogProps): JSX.Element {
   const { user, openAuthModal } = useAuth();
   const [view, setView] = useState<CatalogView>("search");
+  
+  // Catalog Search State
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ReleaseGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,6 +113,89 @@ export function Catalog({
   const [loadingTracks, setLoadingTracks] = useState<Record<string, boolean>>({});
   const [activeFilters, setActiveFilters] = useState<ReleaseType[]>(["Album"]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Global Leaderboard State
+  const [globalQuery, setGlobalQuery] = useState("");
+  const [globalArtist, setGlobalArtist] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+  const [globalData, setGlobalData] = useState<LeaderboardResponse | null>(null);
+  const [loadingGlobal, setLoadingGlobal] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  
+  // Refetch global leaderboard when switching to global view
+  useEffect(() => {
+    if (view === "global" && globalArtist && globalData) {
+      // Refetch in background to get latest data
+      const refetch = async () => {
+        try {
+          const data = await getGlobalLeaderboard(globalArtist);
+          if (data) {
+            setGlobalData(data);
+          }
+        } catch (err) {
+          console.error("Failed to refetch global leaderboard:", err);
+        }
+      };
+      refetch();
+    }
+  }, [view, globalArtist]); // Note: globalData not in deps to avoid infinite loop
+
+  // Debounce for global search suggestions
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (globalQuery.trim().length < 2 || view !== "global" || globalArtist === globalQuery) {
+        setSuggestions([]);
+        return;
+      }
+      
+      setIsSearchingGlobal(true);
+      try {
+        const data = await searchArtistReleaseGroups(globalQuery);
+        // Extract unique artist names
+        const uniqueArtists = Array.from(new Set(
+          data
+            .map(item => item.artist)
+            .filter((a): a is string => !!a)
+        )).slice(0, 5);
+        setSuggestions(uniqueArtists);
+      } catch (err) {
+        console.error("Failed to fetch suggestions:", err);
+      } finally {
+        setIsSearchingGlobal(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [globalQuery, view, globalArtist]);
+
+  const handleGlobalSearch = async (artistName: string) => {
+    setGlobalArtist(artistName);
+    setGlobalQuery(artistName); // Sync input
+    setSuggestions([]);
+    setLoadingGlobal(true);
+    setGlobalError(null);
+    setGlobalData(null);
+
+    try {
+      // 1. Check if stats exist first (optional optimization, but good UX)
+      const stats = await getLeaderboardStats(artistName);
+      
+      if (!stats) {
+        // If no stats, we can skip fetching full leaderboard or just pass null
+        // We'll let the component handle the "no data" state
+        setGlobalData(null);
+      } else {
+        // 2. Fetch full leaderboard
+        const data = await getGlobalLeaderboard(artistName);
+        setGlobalData(data);
+      }
+    } catch (err) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to load global rankings");
+    } finally {
+      setLoadingGlobal(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,6 +319,54 @@ export function Catalog({
             </Button>
           </form>
         )}
+
+        {view === "global" && (
+           <div className="relative animate-in fade-in slide-in-from-top-1 duration-300 z-50">
+             <div className="relative flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={globalQuery}
+                  onChange={(e) => {
+                    setGlobalQuery(e.target.value);
+                    if (!e.target.value) setSuggestions([]);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleGlobalSearch(globalQuery);
+                    }
+                  }}
+                  placeholder="Find global rankings..."
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/10 shadow-sm"
+                />
+                {isSearchingGlobal && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Autocomplete Suggestions */}
+            {suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="py-1">
+                  {suggestions.map((artist) => (
+                    <button
+                      key={artist}
+                      onClick={() => handleGlobalSearch(artist)}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
+                    >
+                      <Search className="h-3 w-3 text-muted-foreground/50" />
+                      <span className="font-medium">{artist}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+           </div>
+        )}
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar pb-24">
@@ -334,6 +487,23 @@ export function Catalog({
               <p className="text-xs font-mono">Search to browse catalog</p>
             </div>
           )
+        ) : view === "global" ? (
+          <div className="animate-in fade-in slide-in-from-bottom-1 duration-300 h-full">
+            {globalArtist ? (
+              <GlobalLeaderboard
+                artist={globalArtist}
+                data={globalData}
+                isLoading={loadingGlobal}
+                error={globalError}
+                onRetry={() => handleGlobalSearch(globalArtist)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full opacity-20 py-20">
+                <Globe className="h-10 w-10 mb-4" />
+                <p className="text-xs font-mono">Search to see global rankings</p>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
             <SessionSelector 

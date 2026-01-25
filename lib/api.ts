@@ -83,6 +83,33 @@ export type ComparisonCreate = {
   decision_time_ms?: number;
 };
 
+export type LeaderboardSong = {
+  id: string;
+  name: string;
+  artist: string;
+  album: string | null;
+  album_art_url: string | null;
+  global_elo: number;
+  global_bt_strength: number;
+  global_votes_count: number;
+  rank: number;
+};
+
+export type LeaderboardResponse = {
+  artist: string;
+  songs: LeaderboardSong[];
+  total_comparisons: number;
+  pending_comparisons: number;
+  last_updated: string | null;
+};
+
+export type LeaderboardStats = {
+  artist: string;
+  total_comparisons: number;
+  pending_comparisons: number;
+  last_updated: string | null;
+};
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 // Helper to show errors visually
@@ -213,6 +240,29 @@ export async function createComparison(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getLeaderboardStats(artist: string): Promise<LeaderboardStats | null> {
+  try {
+    return await fetchBackend<LeaderboardStats>(`/leaderboard/${encodeURIComponent(artist)}/stats`, {
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("[API] Error fetching leaderboard stats:", error);
+    return null;
+  }
+}
+
+export async function getGlobalLeaderboard(artist: string, limit: number = 100): Promise<LeaderboardResponse | null> {
+  try {
+    return await fetchBackend<LeaderboardResponse>(
+      `/leaderboard/${encodeURIComponent(artist)}?limit=${limit}`,
+      { cache: "no-store" }
+    );
+  } catch (error) {
+    console.error("[API] Error fetching global leaderboard:", error);
+    return null;
+  }
 }
 
 
