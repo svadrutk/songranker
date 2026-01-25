@@ -1,12 +1,13 @@
 "use client";
 
-import { type JSX } from "react";
+import { type JSX, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Loader2, AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
 import { cn } from "@/lib/utils";
 import type { LeaderboardResponse } from "@/lib/api";
+import { activateTextTruncateScroll } from "text-truncate-scroll";
 
 type GlobalLeaderboardProps = Readonly<{
   artist: string;
@@ -23,6 +24,12 @@ export function GlobalLeaderboard({
   error,
   onRetry,
 }: GlobalLeaderboardProps): JSX.Element {
+  useEffect(() => {
+    if (data) {
+      activateTextTruncateScroll({ scrollSpeed: 40 });
+    }
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4 animate-in fade-in duration-300">
@@ -109,7 +116,7 @@ export function GlobalLeaderboard({
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.03 }}
-            className="flex items-center gap-3 p-2 rounded-lg bg-card border border-border/40 hover:border-primary/20 transition-colors group"
+            className="text-scroll-group flex items-center gap-3 p-2 rounded-lg bg-card border border-border/40 hover:border-primary/20 transition-colors group"
           >
             <div className={cn(
               "w-8 shrink-0 text-center font-mono font-black italic",
@@ -127,22 +134,12 @@ export function GlobalLeaderboard({
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="scroll-on-hover">
-                <h3 
-                  className="scroll-text font-bold text-xs uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors"
-                  data-text={song.name}
-                >
-                  {song.name}
-                </h3>
-              </div>
-              <div className="scroll-on-hover">
-                <p 
-                  className="scroll-text text-[9px] font-mono text-muted-foreground uppercase"
-                  data-text={song.album || "Unknown Album"}
-                >
-                  {song.album || "Unknown Album"}
-                </p>
-              </div>
+              <h3 className="text-truncate-scroll font-bold text-xs uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors">
+                {song.name}
+              </h3>
+              <p className="text-truncate-scroll text-[9px] font-mono text-muted-foreground uppercase">
+                {song.album || "Unknown Album"}
+              </p>
             </div>
           </motion.div>
         ))}

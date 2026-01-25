@@ -129,36 +129,15 @@
 }
 
 @layer utilities {
-  /* Horizontal scrolling for overflowing text */
-  @keyframes marquee {
-    0% {
-      transform: translateX(0%);
-    }
-    100% {
-      transform: translateX(-50%);
-    }
+  /* Text truncate scroll - parent hover support
+   * When parent with .text-scroll-group is hovered, trigger scroll on all child .text-truncate-scroll elements
+   * This works by matching the library's hover selector pattern
+   */
+  .text-scroll-group:hover .text-truncate-scroll > span {
+    width: auto !important;
   }
   
-  /* Container needs to detect overflow and enable scroll */
-  .scroll-on-hover {
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .scroll-on-hover:hover .scroll-text {
-    animation: marquee 12s linear infinite;
-  }
-  
-  /* Only scroll if text is longer than container */
-  .scroll-text {
-    display: inline-block;
-    white-space: nowrap;
-    padding-right: 2rem; /* Gap before loop */
-  }
-  
-  /* Duplicate text for seamless loop */
-  .scroll-text::after {
-    content: attr(data-text);
-    padding-left: 2rem;
+  .text-scroll-group:hover .text-truncate-scroll > span > span {
+    width: auto !important;
   }
 }

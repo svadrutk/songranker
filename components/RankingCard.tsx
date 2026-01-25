@@ -1,11 +1,13 @@
 "use client";
 
 import type { JSX } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import type { SessionSong } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { CoverArt } from "@/components/CoverArt";
 import { Trophy } from "lucide-react";
+import { activateTextTruncateScroll } from "text-truncate-scroll";
 
 type RankingCardProps = Readonly<{
   song: SessionSong;
@@ -22,6 +24,10 @@ export function RankingCard({
   isWinner,
   disabled,
 }: RankingCardProps): JSX.Element {
+  useEffect(() => {
+    activateTextTruncateScroll({ scrollSpeed: 40 });
+  }, [song]);
+
   return (
     <motion.button
       onClick={onClick}
@@ -31,7 +37,7 @@ export function RankingCard({
       whileTap={!disabled ? { scale: 0.98 } : {}}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
-        "group relative flex flex-row md:flex-col w-full max-w-md md:max-w-[320px] md:w-80 h-full max-h-[190px] md:max-h-none md:h-[30rem] lg:h-[32rem] rounded-xl md:rounded-3xl border-2 transition-all duration-500 overflow-hidden text-left outline-none",
+        "text-scroll-group group relative flex flex-row md:flex-col w-full max-w-md md:max-w-[320px] md:w-80 h-full max-h-[190px] md:max-h-none md:h-[30rem] lg:h-[32rem] rounded-xl md:rounded-3xl border-2 transition-all duration-500 overflow-hidden text-left outline-none",
         "bg-card border-border hover:border-primary/50 hover:bg-primary/[0.02]",
         "hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.05)]",
         "focus-visible:ring-2 focus-visible:ring-primary/50",
@@ -74,36 +80,21 @@ export function RankingCard({
       {/* Info Section */}
       <div className="flex flex-col flex-1 p-3 md:p-6 justify-center text-left md:text-center relative bg-linear-to-r md:bg-linear-to-b from-transparent to-muted/5 min-w-0">
         <div className="space-y-0.5 md:space-y-1 min-w-0">
-          <div className="scroll-on-hover">
-            <h3 
-              className="scroll-text font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300"
-              data-text={song.name}
-            >
-              {song.name}
-            </h3>
-          </div>
-          <div className="scroll-on-hover">
-            <p 
-              className="scroll-text text-[10px] md:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.1em] md:tracking-[0.15em] font-bold opacity-80"
-              data-text={song.artist}
-            >
-              {song.artist}
-            </p>
-          </div>
+          <h3 className="text-truncate-scroll font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300">
+            {song.name}
+          </h3>
+          <p className="text-truncate-scroll text-[10px] md:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.1em] md:tracking-[0.15em] font-bold opacity-80">
+            {song.artist}
+          </p>
         </div>
 
-        <div className="flex flex-row md:flex-col items-center gap-2 md:gap-0 mt-1 md:mt-4 min-w-0">
+        <div className="flex flex-row md:flex-col items-center gap-2 md:gap-0 mt-1 md:mt-4 min-w-0 w-full">
           <span className="hidden md:inline text-[7px] md:text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest font-black">
             Album
           </span>
-          <div className="scroll-on-hover flex-1 md:flex-initial">
-            <span 
-              className="scroll-text text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity"
-              data-text={song.album || "Unknown Release"}
-            >
-              {song.album || "Unknown Release"}
-            </span>
-          </div>
+          <span className="text-truncate-scroll flex-1 md:flex-initial text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity">
+            {song.album || "Unknown Release"}
+          </span>
         </div>
       </div>
 
