@@ -126,14 +126,20 @@ export function GlobalLeaderboard({
               />
             </div>
 
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <div className="overflow-hidden">
-                <h3 className="font-bold text-xs uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors whitespace-nowrap group-hover:animate-scroll-left inline-block">
+            <div className="flex-1 min-w-0">
+              <div className="scroll-on-hover">
+                <h3 
+                  className="scroll-text font-bold text-xs uppercase tracking-tight text-foreground/90 group-hover:text-primary transition-colors"
+                  data-text={song.name}
+                >
                   {song.name}
                 </h3>
               </div>
-              <div className="overflow-hidden">
-                <p className="text-[9px] font-mono text-muted-foreground uppercase whitespace-nowrap group-hover:animate-scroll-left inline-block">
+              <div className="scroll-on-hover">
+                <p 
+                  className="scroll-text text-[9px] font-mono text-muted-foreground uppercase"
+                  data-text={song.album || "Unknown Album"}
+                >
                   {song.album || "Unknown Album"}
                 </p>
               </div>

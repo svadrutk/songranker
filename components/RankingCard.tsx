@@ -73,25 +73,34 @@ export function RankingCard({
 
       {/* Info Section */}
       <div className="flex flex-col flex-1 p-3 md:p-6 justify-center text-left md:text-center relative bg-linear-to-r md:bg-linear-to-b from-transparent to-muted/5 min-w-0">
-        <div className="space-y-0.5 md:space-y-1 min-w-0 overflow-hidden">
-          <div className="overflow-hidden">
-            <h3 className="font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300 whitespace-nowrap group-hover:animate-scroll-left inline-block">
+        <div className="space-y-0.5 md:space-y-1 min-w-0">
+          <div className="scroll-on-hover">
+            <h3 
+              className="scroll-text font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300"
+              data-text={song.name}
+            >
               {song.name}
             </h3>
           </div>
-          <div className="overflow-hidden">
-            <p className="text-[10px] md:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.1em] md:tracking-[0.15em] font-bold opacity-80 whitespace-nowrap group-hover:animate-scroll-left inline-block">
+          <div className="scroll-on-hover">
+            <p 
+              className="scroll-text text-[10px] md:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.1em] md:tracking-[0.15em] font-bold opacity-80"
+              data-text={song.artist}
+            >
               {song.artist}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-row md:flex-col items-center gap-2 md:gap-0 mt-1 md:mt-4 min-w-0 overflow-hidden">
+        <div className="flex flex-row md:flex-col items-center gap-2 md:gap-0 mt-1 md:mt-4 min-w-0">
           <span className="hidden md:inline text-[7px] md:text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest font-black">
             Album
           </span>
-          <div className="overflow-hidden max-w-full">
-            <span className="text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity whitespace-nowrap group-hover:animate-scroll-left inline-block">
+          <div className="scroll-on-hover flex-1 md:flex-initial">
+            <span 
+              className="scroll-text text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity"
+              data-text={song.album || "Unknown Release"}
+            >
               {song.album || "Unknown Release"}
             </span>
           </div>
