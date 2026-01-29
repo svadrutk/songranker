@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, type JSX } from "react";
 import { Catalog } from "@/components/Catalog";
 import { RankingWidget } from "@/components/RankingWidget";
-import { createSession, type ReleaseGroup } from "@/lib/api";
+import { GlobalLeaderboard } from "@/components/GlobalLeaderboard";
+import { createSession, type ReleaseGroup, type LeaderboardResponse } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { DeduplicationModal } from "@/components/DeduplicationModal";
 import {
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-type ViewState = "catalog" | "dedupe" | "ranking";
+type ViewState = "catalog" | "dedupe" | "ranking" | "global";
 
 export default function Home(): JSX.Element {
   const { user } = useAuth();
@@ -30,10 +31,16 @@ export default function Home(): JSX.Element {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  
+  // Global Leaderboard State
+  const [globalArtist, setGlobalArtist] = useState<string | null>(null);
+  const [globalData, setGlobalData] = useState<LeaderboardResponse | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [loadingGlobal, setLoadingGlobal] = useState(false);
 
-  // Auto-collapse sidebar when ranking starts
+  // Auto-collapse sidebar when ranking or global view starts
   useEffect(() => {
-    if (view === "ranking") {
+    if (view === "ranking" || view === "global") {
       setIsSidebarCollapsed(true);
     }
   }, [view]);
@@ -71,6 +78,14 @@ export default function Home(): JSX.Element {
     setSelectedReleases((prev) => 
       prev.some((r) => r.id === release.id) ? prev : [...prev, release]
     );
+  }, []);
+
+  const handleGlobalLeaderboardOpen = useCallback((artist: string, data: LeaderboardResponse | null, errorMsg: string | null) => {
+    setGlobalArtist(artist);
+    setGlobalData(data);
+    setGlobalError(errorMsg);
+    setLoadingGlobal(!data && !errorMsg); // Loading if no data and no error
+    setView("global");
   }, []);
 
   const handleSearchStart = useCallback(() => {
@@ -218,13 +233,14 @@ export default function Home(): JSX.Element {
             onStartRanking={handleStartRanking}
             onSessionSelect={handleSessionSelect}
             onSessionDelete={handleSessionDelete}
+            onGlobalLeaderboardOpen={handleGlobalLeaderboardOpen}
             selectedIds={selectedReleases.map((r) => r.id)}
             activeSessionId={sessionId}
           />
         </div>
       </motion.aside>
 
-      {/* Right Panel: Ranking */}
+      {/* Right Panel: Ranking or Global Leaderboard */}
       <main className="flex-1 h-full overflow-hidden bg-linear-to-br from-background via-background to-primary/5 relative">
         <AnimatePresence>
           {isCreatingSession && <LoadingOverlay />}
@@ -236,7 +252,24 @@ export default function Home(): JSX.Element {
             />
           )}
         </AnimatePresence>
-        <RankingWidget isRanking={view === "ranking"} sessionId={sessionId} />
+        
+        {view === "global" ? (
+          <div className="flex flex-col h-full w-full max-w-3xl mx-auto py-4 md:py-8 px-4 md:px-6 overflow-hidden">
+            <GlobalLeaderboard
+              artist={globalArtist || ""}
+              data={globalData}
+              isLoading={loadingGlobal}
+              error={globalError}
+              onRetry={() => {
+                if (globalArtist) {
+                  handleGlobalLeaderboardOpen(globalArtist, null, null);
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <RankingWidget isRanking={view === "ranking"} sessionId={sessionId} />
+        )}
       </main>
 
 

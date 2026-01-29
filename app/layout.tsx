@@ -4,7 +4,6 @@ import { ThemeProvider } from "@/app/providers";
 import { AuthProvider } from "@/components/AuthProvider";
 import { Navbar } from "@/components/Navbar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { DebugPanel } from "@/components/DebugPanel";
 import { FeedbackButton } from "@/components/FeedbackButton";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import "./globals.css";
@@ -65,8 +64,6 @@ export default function RootLayout({
               <div className="fixed bottom-4 right-4 z-[60]">
                 <ThemeToggle />
               </div>
-              {/* Debug Panel (dev only) */}
-              <DebugPanel />
               {/* Feedback Button */}
               <FeedbackButton />
             </div>

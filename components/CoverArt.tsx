@@ -53,6 +53,7 @@ export function CoverArt({
           loading ? "opacity-0" : "opacity-100"
         }`}
         unoptimized
+        loading="lazy"
         onLoad={() => setLoading(false)}
         onError={() => {
           setError(true);

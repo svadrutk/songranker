@@ -373,6 +373,12 @@ export function RankingWidget({
     return "Top 10 Stable!";
   };
 
+  const getProgressColor = (score: number) => {
+    if (score < 40) return "bg-red-500";
+    if (score < 70) return "bg-yellow-500";
+    return "bg-green-500";
+  };
+
   if (!user) {
     return (
       <RankingPlaceholder
@@ -440,7 +446,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col h-full w-full max-w-7xl mx-auto px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-6 md:py-6 lg:px-8 lg:py-8 overflow-hidden">
+    <div className="flex flex-col h-full w-full px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-6 md:py-6 lg:px-8 lg:py-8 overflow-hidden">
       <KeyboardShortcutsHelp />
       
       <AnimatePresence>
@@ -501,7 +507,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
 
           <div className="relative inline-block mb-0.5 md:mb-0">
             <SpeedLines side="left" />
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tighter uppercase italic px-4 leading-none">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tighter uppercase px-4 leading-none">
               Make Your Choice
             </h2>
             <SpeedLines side="right" />
@@ -529,9 +535,9 @@ function KeyboardShortcutsHelp(): JSX.Element {
                {Math.round(displayScore)}%
              </p>
           </div>
-          <div className="h-1 lg:h-1.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
+          <div className="h-2 lg:h-3 w-full bg-primary/10 overflow-hidden">
             <motion.div 
-              className="h-full bg-primary"
+              className={cn("h-full transition-colors duration-700", getProgressColor(displayScore))}
               initial={{ width: 0 }}
               animate={{ width: `${displayScore}%` }}
               transition={{ duration: 0.5, ease: "easeOut" }}
@@ -565,10 +571,11 @@ function KeyboardShortcutsHelp(): JSX.Element {
                  {displayScore >= 90 ? (
                    <Button 
                      onClick={() => setIsFinished(true)}
-                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-widest text-[10px] md:text-[11px] font-black py-3 md:py-4 px-6 md:px-8 rounded-xl group"
+                     className="h-12 md:h-14 px-6 md:px-8 rounded-xl bg-muted/10 hover:bg-primary/5 text-green-500 border border-green-500 font-mono hover:cursor-pointer uppercase tracking-[0.25em] text-[10px] md:text-xs font-black transition-all group active:scale-95"
                    >
-                     <Check className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-                     View Results
+                     <div className="flex items-center gap-2">
+                       <span>View Results</span>
+                     </div>
                    </Button>
                  ) : (
                    <Button 
@@ -587,7 +594,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
         </div>
 
         {/* Duel Area */}
-        <div className="flex-1 flex flex-col md:flex-row items-center gap-3 md:gap-12 lg:gap-16 w-full justify-center px-4 min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row items-center gap-3 md:gap-12 lg:gap-16 w-full justify-center px-4 min-h-0 overflow-visible">
           {!currentPair ? (
             <PairingLoader />
           ) : (
@@ -599,12 +606,12 @@ function KeyboardShortcutsHelp(): JSX.Element {
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentPair[index].song_id}
-                      initial={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
-                      animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
-                      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                      initial={{ opacity: 0, filter: "blur(12px)" }}
+                      animate={{ opacity: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, filter: "blur(12px)" }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
                       className={cn(
-                        "w-full flex-1 min-h-0 flex justify-center",
+                        "flex justify-center flex-1 min-w-[240px] max-w-[360px] transition-all duration-500",
                         index === 0 ? "items-end md:items-center" : "items-start md:items-center"
                       )}
                     >

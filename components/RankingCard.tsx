@@ -1,13 +1,11 @@
 "use client";
 
 import type { JSX } from "react";
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import type { SessionSong } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { CoverArt } from "@/components/CoverArt";
 import { Trophy } from "lucide-react";
-import { activateTextTruncateScroll } from "text-truncate-scroll";
 
 type RankingCardProps = Readonly<{
   song: SessionSong;
@@ -24,9 +22,6 @@ export function RankingCard({
   isWinner,
   disabled,
 }: RankingCardProps): JSX.Element {
-  useEffect(() => {
-    activateTextTruncateScroll({ scrollSpeed: 40 });
-  }, [song]);
 
   return (
     <motion.button
@@ -37,17 +32,17 @@ export function RankingCard({
       whileTap={!disabled ? { scale: 0.98 } : {}}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
-        "text-scroll-group group relative flex flex-row md:flex-col w-full max-w-md md:max-w-[320px] md:w-80 h-full max-h-[190px] md:max-h-none md:h-[30rem] lg:h-[32rem] rounded-xl md:rounded-3xl border-2 transition-all duration-500 overflow-hidden text-left outline-none",
-        "bg-card border-border hover:border-primary/50 hover:bg-primary/[0.02]",
+        "group relative flex flex-row md:flex-col w-full max-w-md md:max-w-none h-[190px] md:h-auto rounded-xl md:rounded-3xl transition-all duration-500 overflow-hidden text-left outline-none shrink-0",
+        "bg-card hover:bg-primary/[0.02]",
         "hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.05)]",
         "focus-visible:ring-2 focus-visible:ring-primary/50",
-        isActive && "border-primary bg-primary/[0.05] ring-2 ring-primary/20",
-        isWinner && "border-primary z-10 shadow-[0_0_40px_-5px_var(--primary)]",
+        isActive && "bg-primary/[0.05] ring-2 ring-primary/20",
+        isWinner && "z-10 shadow-[0_0_40px_-5px_var(--primary)]",
         disabled && "pointer-events-none opacity-80"
       )}
     >
       {/* Artwork Section */}
-      <div className="relative h-full aspect-square md:w-full md:h-auto md:aspect-square bg-muted/30 flex items-center justify-center overflow-hidden border-r md:border-r-0 md:border-b border-border/50 shrink-0">
+      <div className="relative h-[190px] w-[190px] md:w-full md:h-auto md:aspect-square shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
         <CoverArt
           title={song.name}
           url={song.cover_url}
@@ -78,23 +73,29 @@ export function RankingCard({
       </div>
 
       {/* Info Section */}
-      <div className="flex flex-col flex-1 p-3 md:p-6 justify-center text-left md:text-center relative bg-linear-to-r md:bg-linear-to-b from-transparent to-muted/5 min-w-0">
-        <div className="space-y-0.5 md:space-y-1 min-w-0">
-          <h3 className="text-truncate-scroll font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300">
-            {song.name}
-          </h3>
-          <p className="text-truncate-scroll text-[10px] md:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.1em] md:tracking-[0.15em] font-bold opacity-80">
-            {song.artist}
-          </p>
+      <div className="flex flex-col flex-1 p-3 md:p-6 justify-center text-left md:text-center relative bg-linear-to-r md:bg-linear-to-b from-transparent to-muted/5 min-w-0 overflow-hidden">
+        <div className="space-y-0.5 md:space-y-1 min-w-0 w-full">
+          <div className="hover-scroll-container w-full">
+            <h3 className="hover-scroll-content font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300">
+              {song.name}
+            </h3>
+          </div>
+          <div className="hover-scroll-container w-full">
+            <p className="hover-scroll-content text-[10px] md:text-[11px] font-mono text-muted-foreground uppercase tracking-[0.1em] md:tracking-[0.15em] font-bold opacity-80">
+              {song.artist}
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-row md:flex-col items-center gap-2 md:gap-0 mt-1 md:mt-4 min-w-0 w-full">
-          <span className="hidden md:inline text-[7px] md:text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest font-black">
+        <div className="flex flex-row md:flex-col items-center gap-2 md:gap-0 mt-1 md:mt-4 min-w-0 w-full overflow-hidden">
+          <span className="hidden md:inline text-[7px] md:text-[9px] font-mono text-muted-foreground/50 uppercase tracking-widest font-black shrink-0">
             Album
           </span>
-          <span className="text-truncate-scroll flex-1 md:flex-initial text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity">
-            {song.album || "Unknown Release"}
-          </span>
+          <div className="hover-scroll-container flex-1 w-full">
+            <span className="hover-scroll-content text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity">
+              {song.album || "Unknown Release"}
+            </span>
+          </div>
         </div>
       </div>
 
