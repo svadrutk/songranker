@@ -134,13 +134,14 @@
     @apply overflow-hidden whitespace-nowrap;
     container-type: inline-size;
     width: 100%;
-    /* Subtle fade at the edges */
-    mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+    /* Subtle fade at the edges - reduced left fade to prevent cutoff */
+    mask-image: linear-gradient(to right, black 2%, black 94%, transparent);
   }
 
   .hover-scroll-content {
     @apply inline-block;
     width: max-content;
+    padding-left: 1px;
     /* Let parent text-center handle alignment when short */
   }
 

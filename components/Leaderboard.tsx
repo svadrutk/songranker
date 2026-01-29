@@ -47,40 +47,40 @@ export function Leaderboard({ songs, onContinue, isPreview }: LeaderboardProps):
       animate="visible"
       variants={containerVariants}
       className={cn(
-        "flex flex-col h-full w-full max-w-3xl mx-auto py-8 overflow-hidden",
+        "flex flex-col h-full w-full max-w-3xl mx-auto py-4 md:py-8 overflow-hidden",
         isPreview && "px-4"
       )}
     >
-      <motion.div variants={itemVariants} className="shrink-0 mb-8">
-        <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">
+      <motion.div variants={itemVariants} className="shrink-0 mb-4 md:mb-8">
+        <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">
           {isPreview ? "Current Standings" : "Rankings"}
         </p>
-        <h2 className="text-4xl font-black tracking-tight uppercase">
+        <h2 className="text-2xl md:text-4xl font-black tracking-tight uppercase">
           Your Top Tracks
         </h2>
       </motion.div>
 
-      <div className="w-full flex-1 overflow-y-auto mb-8">
+      <div className="w-full flex-1 overflow-y-auto mb-4 md:mb-8">
         {sortedSongs.map((song, index) => (
           <motion.div
             key={song.song_id}
             variants={itemVariants}
-            className="flex items-center gap-6 py-4 px-2 border-b border-border last:border-b-0 hover:bg-accent transition-colors"
+            className="flex items-center gap-3 md:gap-6 py-3 md:py-4 px-1 md:px-2 border-b border-border last:border-b-0 hover:bg-accent transition-colors"
           >
-            <div className="w-16 shrink-0 text-4xl font-black font-mono text-foreground text-right">
+            <div className="w-10 md:w-16 shrink-0 text-2xl md:text-4xl font-black font-mono text-foreground text-right">
               {index + 1}
             </div>
-            <div className="h-16 w-16 shrink-0">
+            <div className="h-12 w-12 md:h-16 md:w-16 shrink-0">
               <CoverArt
                 title={song.name}
                 url={song.cover_url}
                 spotifyId={song.spotify_id}
-                className="h-16 w-16 rounded object-cover"
+                className="h-12 w-12 md:h-16 md:w-16 rounded object-cover"
               />
             </div>
-            <div className="flex-1 min-w-0 space-y-1">
-              <h3 className="font-black truncate text-lg uppercase tracking-tight leading-tight">{song.name}</h3>
-              <p className="text-sm font-mono text-muted-foreground uppercase truncate">
+            <div className="flex-1 min-w-0 space-y-0.5 md:space-y-1">
+              <h3 className="font-black truncate text-sm md:text-lg uppercase tracking-tight leading-tight">{song.name}</h3>
+              <p className="text-[10px] md:text-sm font-mono text-muted-foreground uppercase truncate">
                 {song.artist} • {song.album}
               </p>
             </div>

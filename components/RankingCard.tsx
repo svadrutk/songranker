@@ -32,8 +32,8 @@ export function RankingCard({
       whileTap={!disabled ? { scale: 0.98 } : {}}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
-        "group relative flex flex-row md:flex-col w-full max-w-md md:max-w-none h-[190px] md:h-auto rounded-xl md:rounded-3xl transition-all duration-500 overflow-hidden text-left outline-none shrink-0",
-        "bg-card hover:bg-primary/[0.02]",
+        "group relative flex flex-row md:flex-col w-full max-w-md md:max-w-none h-24 md:h-auto rounded-xl md:rounded-3xl transition-all duration-500 overflow-hidden text-left outline-none shrink-0",
+        "bg-card hover:bg-primary/[0.02] border border-border/50",
         "hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.05)]",
         "focus-visible:ring-2 focus-visible:ring-primary/50",
         isActive && "bg-primary/[0.05] ring-2 ring-primary/20",
@@ -42,7 +42,7 @@ export function RankingCard({
       )}
     >
       {/* Artwork Section */}
-      <div className="relative h-[190px] w-[190px] md:w-full md:h-auto md:aspect-square shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
+      <div className="relative h-24 w-24 md:w-full md:h-auto md:aspect-square shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
         <CoverArt
           title={song.name}
           url={song.cover_url}
@@ -73,10 +73,10 @@ export function RankingCard({
       </div>
 
       {/* Info Section */}
-      <div className="flex flex-col flex-1 p-3 md:p-6 justify-center text-left md:text-center relative bg-linear-to-r md:bg-linear-to-b from-transparent to-muted/5 min-w-0 overflow-hidden">
+      <div className="flex flex-col flex-1 p-3 md:p-6 justify-center text-left md:text-center relative bg-muted/5 md:bg-linear-to-b md:from-transparent md:to-muted/5 min-w-0 overflow-hidden">
         <div className="space-y-0.5 md:space-y-1 min-w-0 w-full">
           <div className="hover-scroll-container w-full">
-            <h3 className="hover-scroll-content font-black text-sm md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300">
+            <h3 className="hover-scroll-content font-black text-[13px] md:text-lg leading-tight tracking-tight group-hover:text-primary transition-colors duration-300">
               {song.name}
             </h3>
           </div>
@@ -92,7 +92,7 @@ export function RankingCard({
             Album
           </span>
           <div className="hover-scroll-container flex-1 w-full">
-            <span className="hover-scroll-content text-[9px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity">
+            <span className="hover-scroll-content text-[10px] md:text-[10px] font-mono font-bold opacity-60 group-hover:opacity-100 transition-opacity">
               {song.album || "Unknown Release"}
             </span>
           </div>
