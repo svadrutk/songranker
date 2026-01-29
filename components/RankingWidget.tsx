@@ -602,12 +602,12 @@ function KeyboardShortcutsHelp(): JSX.Element {
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentPair[index].song_id}
-                      initial={{ opacity: 0, filter: "blur(12px)" }}
-                      animate={{ opacity: 1, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, filter: "blur(12px)" }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
                       className={cn(
-                        "flex justify-center flex-1 w-full min-w-0 md:min-w-[240px] max-w-full md:max-w-[360px] transition-all duration-500",
+                        "flex justify-center flex-1 w-full min-w-0 md:min-w-[240px] max-w-full md:max-w-[360px]",
                         index === 0 ? "items-end md:items-center" : "items-start md:items-center"
                       )}
                     >
