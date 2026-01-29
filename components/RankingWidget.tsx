@@ -182,17 +182,15 @@ export function RankingWidget({
       const scoreA = tie ? 0.5 : wId === songA.song_id ? 1 : 0;
       const [newEloA, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, scoreA, kFactor);
 
-      setSongs((prevSongs) => {
-        const updated = prevSongs.map((s) => {
-          if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
-          if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
-          return s;
-        });
-
-        setCurrentPair(getNextPair(updated));
-        lastPairLoadTime.current = Date.now();
-        return updated;
+      const updatedSongs = songs.map((s) => {
+        if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
+        if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
+        return s;
       });
+
+      setSongs(updatedSongs);
+      setCurrentPair(getNextPair(updatedSongs));
+      lastPairLoadTime.current = Date.now();
 
       setTotalDuels((prev) => prev + 1);
       setWinnerId(null);
@@ -308,16 +306,14 @@ export function RankingWidget({
     const [newEloA] = calculateNewRatings(songA.local_elo, songB.local_elo, 0);
     const [, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, 1);
 
-      setSongs((prevSongs) => {
-        const updated = prevSongs.map((s) => {
-          if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
-          if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
-          return s;
-        });
-        setCurrentPair(getNextPair(updated));
-        lastPairLoadTime.current = Date.now();
-        return updated;
-      });
+    const updatedSongs = songs.map((s) => {
+      if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
+      if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
+      return s;
+    });
+    setSongs(updatedSongs);
+    setCurrentPair(getNextPair(updatedSongs));
+    lastPairLoadTime.current = Date.now();
 
 
     setTotalDuels((prev) => prev + 1);
@@ -602,13 +598,13 @@ function KeyboardShortcutsHelp(): JSX.Element {
 
 
                 <Fragment key={index}>
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence mode="popLayout">
                     <motion.div
                       key={currentPair[index].song_id}
-                      initial={{ opacity: 0, filter: "blur(12px)" }}
-                      animate={{ opacity: 1, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, filter: "blur(12px)" }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      initial={{ opacity: 0, filter: "blur(12px)", scale: 0.95 }}
+                      animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+                      exit={{ opacity: 0, filter: "blur(12px)", scale: 0.95 }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                       className={cn(
                         "flex justify-center flex-1 w-full min-w-0 md:min-w-[240px] max-w-full md:max-w-[360px] transition-all duration-500",
                         index === 0 ? "items-end md:items-center" : "items-start md:items-center"

@@ -27,12 +27,11 @@ export function RankingCard({
     <motion.button
       onClick={onClick}
       disabled={disabled}
-      initial={false}
       animate={isWinner ? { scale: [1, 1.05, 1] } : {}}
       whileTap={!disabled ? { scale: 0.98 } : {}}
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={cn(
-        "group relative flex flex-row md:flex-col w-full max-w-md md:max-w-none h-24 md:h-auto rounded-xl md:rounded-3xl transition-all duration-500 overflow-hidden text-left outline-none shrink-0",
+        "group relative flex flex-row md:flex-col w-full max-w-md md:max-w-none h-44 md:h-auto rounded-xl md:rounded-3xl transition-all duration-500 overflow-hidden text-left outline-none shrink-0",
         "bg-card hover:bg-primary/[0.02] border border-border/50",
         "hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_20px_50px_-12px_rgba(255,255,255,0.05)]",
         "focus-visible:ring-2 focus-visible:ring-primary/50",
@@ -42,7 +41,7 @@ export function RankingCard({
       )}
     >
       {/* Artwork Section */}
-      <div className="relative h-24 w-24 md:w-full md:h-auto md:aspect-square shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
+      <div className="relative h-44 w-44 md:w-full md:h-auto md:aspect-square shrink-0 bg-muted/30 flex items-center justify-center overflow-hidden">
         <CoverArt
           title={song.name}
           url={song.cover_url}
