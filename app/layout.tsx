@@ -5,7 +5,6 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { FeedbackProvider } from "@/components/FeedbackProvider";
 import { Navbar } from "@/components/Navbar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { FeedbackButton } from "@/components/FeedbackButton";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import "./globals.css";
 

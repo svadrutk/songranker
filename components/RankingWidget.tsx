@@ -290,7 +290,7 @@ export function RankingWidget({
         console.error("Failed to sync comparison:", error);
       }
     },
-    [currentPair, sessionId, winnerId, triggerRankUpdateNotification]
+    [currentPair, sessionId, winnerId, triggerRankUpdateNotification, songs]
   );
 
   const handleSkip = useCallback(async (): Promise<void> => {
@@ -330,7 +330,7 @@ export function RankingWidget({
     }).catch(err => console.error("Failed to record skip:", err));
 
 
-  }, [currentPair, sessionId]);
+  }, [currentPair, sessionId, songs]);
 
   useEffect(() => {
     if (!currentPair || !!winnerId || isTie || isSkipping) return;
