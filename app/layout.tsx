@@ -64,8 +64,6 @@ export default function RootLayout({
               <div className="fixed bottom-4 right-4 z-[60]">
                 <ThemeToggle />
               </div>
-              {/* Feedback Button */}
-              <FeedbackButton />
             </div>
           </AuthProvider>
         </ThemeProvider>
