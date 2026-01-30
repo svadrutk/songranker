@@ -2,17 +2,19 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="50.833801mm"
-   height="47.490284mm"
-   viewBox="0 0 50.833801 47.490284"
+   width="60.833801mm"
+   height="60.833801mm"
+   viewBox="0 0 60.833801 60.833801"
    version="1.1"
    id="svg1"
    xml:space="preserve"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg"><defs
-     id="defs1" /><g
+     id="defs1" />
+  <rect width="60.833801" height="60.833801" fill="black" />
+  <g
      id="layer1"
-     transform="translate(-65.813155,-140.99017)"><g
+     transform="translate(-60.813155,-134.3184115)"><g
        id="g17"><g
          style="fill:#ffffff;fill-opacity:1;stroke:#ffffff;stroke-width:0;stroke-dasharray:none;stroke-opacity:1"
          id="g10-5"
