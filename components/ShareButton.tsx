@@ -96,22 +96,14 @@ export function ShareButton({ songs }: ShareButtonProps): JSX.Element {
     <Button
       onClick={handleShare}
       disabled={isGenerating}
-      className="px-8 md:px-12 py-5 md:py-6 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-mono uppercase tracking-widest text-[10px] md:text-xs font-black group relative overflow-hidden"
+      className="flex-1 h-12 font-mono uppercase tracking-wider text-sm font-bold bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white border border-blue-600 hover:border-blue-700 hover:cursor-pointer"
     >
       {isGenerating ? (
         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
       ) : (
-        <Share2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+        <Share2 className="h-4 w-4 mr-2" />
       )}
       {isGenerating ? "Generating..." : "Share Rankings"}
-      
-      {!isGenerating && (
-        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-      )}
-      
-      {isGenerating && (
-        <div className="absolute inset-0 bg-blue-500/20 animate-pulse" />
-      )}
     </Button>
   );
 }

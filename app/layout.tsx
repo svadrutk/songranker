@@ -2,10 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/app/providers";
 import { AuthProvider } from "@/components/AuthProvider";
+import { FeedbackProvider } from "@/components/FeedbackProvider";
 import { Navbar } from "@/components/Navbar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { DebugPanel } from "@/components/DebugPanel";
-import { FeedbackButton } from "@/components/FeedbackButton";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import "./globals.css";
 
@@ -55,21 +54,19 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
-              <ErrorBanner />
-              <Navbar />
-              <main className="flex-1 min-h-0 overflow-hidden relative">
-                {children}
-              </main>
-              {/* Global Theme Toggle in Bottom Right */}
-              <div className="fixed bottom-4 right-4 z-[60]">
-                <ThemeToggle />
+            <FeedbackProvider>
+              <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
+                <ErrorBanner />
+                <Navbar />
+                <main className="flex-1 min-h-0 overflow-hidden relative">
+                  {children}
+                </main>
+                {/* Global Theme Toggle in Bottom Right */}
+                <div className="fixed bottom-4 right-4 z-[60]">
+                  <ThemeToggle />
+                </div>
               </div>
-              {/* Debug Panel (dev only) */}
-              <DebugPanel />
-              {/* Feedback Button */}
-              <FeedbackButton />
-            </div>
+            </FeedbackProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, type SessionSong } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
 import { calculateNewRatings, calculateKFactor } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy, Scale, RotateCcw, Check, Sword, ChartNetwork, Eye } from "lucide-react";
+import { Music, LogIn, Loader2, Trophy, Scale, Meh, Sword, ChartNetwork, Eye } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { RankingCard } from "@/components/RankingCard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -177,26 +177,25 @@ export function RankingWidget({
       const kFactor = calculateKFactor(decisionTime);
       console.log(`[Timer] Final Decision Time: ${decisionTime}ms (K-Factor: ${kFactor})`);
 
+      // Wait for winner animation/overlay before switching
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       const scoreA = tie ? 0.5 : wId === songA.song_id ? 1 : 0;
       const [newEloA, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, scoreA, kFactor);
 
-      setSongs((prevSongs) => {
-        const updated = prevSongs.map((s) => {
-          if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
-          if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
-          return s;
-        });
-
-        setCurrentPair(getNextPair(updated));
-        lastPairLoadTime.current = Date.now();
-        return updated;
+      const updatedSongs = songs.map((s) => {
+        if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
+        if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
+        return s;
       });
 
-      setTotalDuels((prev) => prev + 1);
+      setSongs(updatedSongs);
+      setCurrentPair(getNextPair(updatedSongs));
+      lastPairLoadTime.current = Date.now();
+
       setWinnerId(null);
       setIsTie(false);
+      setTotalDuels((prev) => prev + 1);
 
       try {
         const response = await createComparison(sessionId, {
@@ -291,7 +290,7 @@ export function RankingWidget({
         console.error("Failed to sync comparison:", error);
       }
     },
-    [currentPair, sessionId, winnerId, triggerRankUpdateNotification]
+    [currentPair, sessionId, winnerId, triggerRankUpdateNotification, songs]
   );
 
   const handleSkip = useCallback(async (): Promise<void> => {
@@ -308,16 +307,14 @@ export function RankingWidget({
     const [newEloA] = calculateNewRatings(songA.local_elo, songB.local_elo, 0);
     const [, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, 1);
 
-      setSongs((prevSongs) => {
-        const updated = prevSongs.map((s) => {
-          if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
-          if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
-          return s;
-        });
-        setCurrentPair(getNextPair(updated));
-        lastPairLoadTime.current = Date.now();
-        return updated;
-      });
+    const updatedSongs = songs.map((s) => {
+      if (s.song_id === songA.song_id) return { ...s, local_elo: newEloA };
+      if (s.song_id === songB.song_id) return { ...s, local_elo: newEloB };
+      return s;
+    });
+    setSongs(updatedSongs);
+    setCurrentPair(getNextPair(updatedSongs));
+    lastPairLoadTime.current = Date.now();
 
 
     setTotalDuels((prev) => prev + 1);
@@ -333,7 +330,7 @@ export function RankingWidget({
     }).catch(err => console.error("Failed to record skip:", err));
 
 
-  }, [currentPair, sessionId]);
+  }, [currentPair, sessionId, songs]);
 
   useEffect(() => {
     if (!currentPair || !!winnerId || isTie || isSkipping) return;
@@ -371,6 +368,12 @@ export function RankingWidget({
     if (score < 60) return "Establishing Order...";
     if (score < 90) return "Stabilizing Top 10...";
     return "Top 10 Stable!";
+  };
+
+  const getProgressColor = (score: number) => {
+    if (score < 40) return "bg-red-500";
+    if (score < 70) return "bg-yellow-500";
+    return "bg-green-500";
   };
 
   if (!user) {
@@ -422,7 +425,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
         <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">↑</kbd>
       </div>
       <div className="flex items-center justify-end gap-3">
-        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">Skip</span>
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-medium">IDC</span>
         <kbd className="h-6 min-w-[24px] px-1.5 flex items-center justify-center rounded bg-muted/50 border border-border/50 text-muted-foreground font-mono text-[10px] font-bold shadow-sm">↓</kbd>
       </div>
     </div>
@@ -440,7 +443,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col h-full w-full max-w-7xl mx-auto px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-6 md:py-6 lg:px-8 lg:py-8 overflow-hidden">
+    <div className="flex flex-col h-full w-full px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:px-6 md:py-6 lg:px-8 lg:py-8 overflow-hidden">
       <KeyboardShortcutsHelp />
       
       <AnimatePresence>
@@ -488,9 +491,9 @@ function KeyboardShortcutsHelp(): JSX.Element {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col items-center gap-4 md:gap-6 lg:gap-8 animate-in fade-in zoom-in duration-700 w-full h-full min-h-0">
+      <div className="flex flex-col items-center gap-3 md:gap-6 lg:gap-8 animate-in fade-in duration-700 w-full h-full min-h-0">
         {/* Header Section */}
-        <div className="text-center space-y-2 md:space-y-3 relative shrink-0">
+        <div className="text-center space-y-1 md:space-y-3 relative shrink-0">
           <div className="hidden md:flex items-center justify-center gap-3 mb-0 md:mb-1">
             <div className="h-[1px] md:h-[2px] w-6 md:w-12 bg-primary/20 rounded-full" />
             <p className="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-[0.2em] md:tracking-[0.3em] font-mono">
@@ -501,37 +504,38 @@ function KeyboardShortcutsHelp(): JSX.Element {
 
           <div className="relative inline-block mb-0.5 md:mb-0">
             <SpeedLines side="left" />
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tighter uppercase italic px-4 leading-none">
+            <h2 className="text-xl md:text-3xl lg:text-4xl font-black tracking-tighter uppercase px-4 leading-none">
               Make Your Choice
             </h2>
+            <h2 className="sr-only">Make Your Choice</h2>
             <SpeedLines side="right" />
           </div>
 
-          <div className="flex items-center justify-center gap-4 text-[9px] md:text-[11px] lg:text-xs font-mono text-muted-foreground/60 uppercase font-bold">
+          <div className="flex items-center justify-center gap-2 md:gap-4 text-[8px] md:text-[11px] lg:text-xs font-mono text-muted-foreground/60 uppercase font-bold">
             <StatBadge 
               icon={<div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-primary animate-pulse" />} 
               label={`${songs.length} Tracks`} 
             />
             <StatBadge 
-              icon={<Trophy className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary/60" />} 
+              icon={<Trophy className="h-3 w-3 md:h-4 md:w-4 text-primary/60" />} 
               label={`${totalDuels} Duels`} 
             />
           </div>
         </div>
 
         {/* Progress Section */}
-        <div className="w-full max-w-xl space-y-2 px-6 md:px-4 shrink-0 relative">
+        <div className="w-full max-w-xl space-y-1.5 md:space-y-2 px-6 md:px-4 shrink-0 relative">
           <div className="flex items-center justify-between px-1">
-             <p className="text-[8px] md:text-[10px] font-mono font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-primary/60">
+             <p className="text-[7px] md:text-[10px] font-mono font-bold uppercase tracking-[0.1em] md:tracking-[0.2em] text-primary/60">
                {getConvergenceLabel(displayScore)}
              </p>
-             <p className="text-[8px] md:text-[10px] font-mono font-bold text-muted-foreground/40">
+             <p className="text-[7px] md:text-[10px] font-mono font-bold text-muted-foreground/40">
                {Math.round(displayScore)}%
              </p>
           </div>
-          <div className="h-1 lg:h-1.5 w-full bg-primary/10 rounded-full overflow-hidden border border-primary/5">
+          <div className="h-1.5 md:h-2 lg:h-3 w-full bg-primary/10 overflow-hidden">
             <motion.div 
-              className="h-full bg-primary"
+              className={cn("h-full transition-colors duration-700", getProgressColor(displayScore))}
               initial={{ width: 0 }}
               animate={{ width: `${displayScore}%` }}
               transition={{ duration: 0.5, ease: "easeOut" }}
@@ -544,10 +548,10 @@ function KeyboardShortcutsHelp(): JSX.Element {
                  initial={{ opacity: 0, y: -5 }}
                  animate={{ opacity: 1, y: 0 }}
                  exit={{ opacity: 0, y: -5 }}
-                 className="flex items-center justify-center gap-2 pt-1"
+                 className="flex items-center justify-center gap-1.5 md:gap-2 pt-0.5 md:pt-1"
                >
-                 <Sword className="h-3 w-3 text-primary/50 animate-pulse" />
-                 <p className="text-[9px] md:text-[10px] font-mono text-muted-foreground/70">
+                 <Sword className="h-2.5 w-2.5 md:h-3 md:w-3 text-primary/50 animate-pulse" />
+                 <p className="text-[8px] md:text-[10px] font-mono text-muted-foreground/70">
                    Keep battling! A few more duels will refine your rankings...
                  </p>
                </motion.div>
@@ -560,23 +564,22 @@ function KeyboardShortcutsHelp(): JSX.Element {
                  initial={{ opacity: 0, y: 10 }}
                  animate={{ opacity: 1, y: 0 }}
                  exit={{ opacity: 0, y: -10 }}
-                 className="flex justify-center gap-3 pt-2 md:pt-4"
+                 className="flex justify-center gap-2 md:gap-3 pt-2 md:pt-4"
                >
                  {displayScore >= 90 ? (
                    <Button 
                      onClick={() => setIsFinished(true)}
-                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-mono uppercase tracking-widest text-[10px] md:text-[11px] font-black py-3 md:py-4 px-6 md:px-8 rounded-xl group"
+                     className="h-10 md:h-14 px-5 md:px-8 rounded-xl bg-muted/10 hover:bg-primary/5 text-green-500 border border-green-500 font-mono hover:cursor-pointer uppercase tracking-[0.15em] md:tracking-[0.25em] text-[9px] md:text-xs font-black transition-all group active:scale-95"
                    >
-                     <Check className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                      View Results
                    </Button>
                  ) : (
                    <Button 
                      onClick={() => setShowPeek(true)}
                      variant="outline"
-                     className="border-primary/20 hover:border-primary/40 text-muted-foreground hover:text-primary font-mono uppercase tracking-widest text-[9px] md:text-[10px] font-black py-2 md:py-3 px-4 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
+                     className="h-9 md:h-14 border-primary/20 hover:border-primary/40 text-muted-foreground hover:text-primary font-mono uppercase tracking-widest text-[8px] md:text-[10px] font-black py-2 md:py-3 px-3 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
                    >
-                     <Eye className="h-3.5 w-3.5 mr-2 group-hover:scale-110 transition-transform" />
+                     <Eye className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1.5 md:mr-2 group-hover:scale-110 transition-transform" />
                      Peek Rankings
                    </Button>
                  )}
@@ -587,7 +590,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
         </div>
 
         {/* Duel Area */}
-        <div className="flex-1 flex flex-col md:flex-row items-center gap-3 md:gap-12 lg:gap-16 w-full justify-center px-4 min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col md:flex-row items-center gap-2 md:gap-12 lg:gap-16 w-full justify-center px-4 min-h-0 overflow-visible">
           {!currentPair ? (
             <PairingLoader />
           ) : (
@@ -599,12 +602,12 @@ function KeyboardShortcutsHelp(): JSX.Element {
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={currentPair[index].song_id}
-                      initial={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
-                      animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, x: index === 0 ? -40 : 40, filter: "blur(12px)" }}
-                      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.25, ease: "easeOut" }}
                       className={cn(
-                        "w-full flex-1 min-h-0 flex justify-center",
+                        "flex justify-center flex-1 w-full min-w-0 md:min-w-[240px] max-w-full md:max-w-[360px]",
                         index === 0 ? "items-end md:items-center" : "items-start md:items-center"
                       )}
                     >
@@ -618,7 +621,7 @@ function KeyboardShortcutsHelp(): JSX.Element {
                   </AnimatePresence>
 
                   {index === 0 && (
-                    <div className="flex flex-row md:flex-col gap-2 md:gap-4 lg:gap-6 items-center shrink-0 w-full md:w-auto justify-center px-4 md:px-0">
+                    <div className="flex flex-row md:flex-col gap-2 md:gap-4 lg:gap-6 items-center shrink-0 w-full md:w-auto justify-center px-2 md:px-0">
                       <div className="relative hidden md:block">
                         <div className="h-10 w-10 lg:h-16 lg:w-16 rounded-full border-2 md:border-[3px] border-primary flex items-center justify-center bg-background shadow-lg relative z-10">
                           <span className="text-xs lg:text-lg font-mono font-black text-primary select-none">
@@ -627,20 +630,20 @@ function KeyboardShortcutsHelp(): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="flex flex-row md:flex-col gap-2 md:gap-3 lg:gap-4 w-full md:w-auto">
-                        <div className="flex-1 md:flex-none">
+                      <div className="flex flex-row md:flex-col gap-2 md:gap-3 lg:gap-4 w-full md:w-auto max-w-[280px] md:max-w-none">
+                        <div className="flex-1 md:flex-none min-w-0">
                           <RankingControlButton
-                            icon={<Scale className="h-3.5 w-3.5 lg:h-5 lg:w-5" />}
+                            icon={<Scale className="h-3 w-3 md:h-5 md:w-5" />}
                             label="Tie"
                             onClick={() => handleChoice(null, true)}
                             disabled={!!winnerId || isTie || isSkipping}
                             isActive={isTie}
                           />
                         </div>
-                        <div className="flex-1 md:flex-none">
+                        <div className="flex-1 md:flex-none min-w-0">
                           <RankingControlButton
-                            icon={<RotateCcw className="h-3.5 w-3.5 lg:h-5 lg:w-5" />}
-                            label="Skip"
+                            icon={<Meh className="h-3 w-3 md:h-5 md:w-5" />}
+                            label="IDC"
                             onClick={handleSkip}
                             disabled={!!winnerId || isTie || isSkipping}
                             isActive={isSkipping}
@@ -666,7 +669,7 @@ type StatBadgeProps = Readonly<{
 
 function StatBadge({ icon, label }: StatBadgeProps): JSX.Element {
   return (
-    <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-border/40 bg-muted/10 backdrop-blur-sm">
+    <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-0.5 md:py-1 rounded-full border border-border/40 bg-muted/10 backdrop-blur-sm">
       {icon}
       <span>{label}</span>
     </div>
@@ -709,14 +712,35 @@ function RankingPlaceholder({
   return (
     <div className="flex flex-col items-center justify-center h-full w-full gap-8">
       <div className="flex flex-col items-center gap-12 w-full max-w-2xl text-center">
-        <div className="flex items-center gap-6 opacity-20 grayscale pointer-events-none scale-90 select-none">
-          <div className="h-64 w-64 rounded-2xl border-2 border-dashed border-primary/50" />
-          <div className="flex flex-col gap-6">
-            <div className="h-28 w-44 rounded-xl border-2 border-dashed border-primary/50" />
-            <div className="h-28 w-44 rounded-xl border-2 border-dashed border-primary/50" />
-          </div>
-          <div className="h-64 w-64 rounded-2xl border-2 border-dashed border-primary/50" />
+        {/* Responsive Placeholder Graphic */}
+        <div className="relative flex items-center justify-center gap-4 md:gap-8 opacity-25 grayscale pointer-events-none select-none transform transition-all duration-700 hover:opacity-40 hover:scale-105">
+           {/* Background Glow */}
+           <div className="absolute inset-0 bg-primary/20 blur-[60px] md:blur-[100px] rounded-full z-[-1]" />
+
+           {/* Left Panel (Catalog) - Hidden on Mobile */}
+           <div className="hidden md:block h-48 w-32 lg:h-64 lg:w-48 rounded-2xl border-2 border-dashed border-primary/40 bg-linear-to-b from-primary/5 to-transparent" />
+           
+           {/* Center Panel (Duel) - Always Visible */}
+           <div className="flex flex-col gap-4 md:gap-6 relative">
+             {/* Decorative connection lines */}
+             <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-primary/20 -z-10 hidden md:block" />
+             <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-primary/20 -z-10 md:hidden" />
+
+             {/* Top Card */}
+             <div className="h-24 w-32 md:h-28 md:w-44 rounded-xl border-2 border-dashed border-primary/60 bg-background/50 backdrop-blur-xs flex items-center justify-center">
+               <div className="h-8 w-8 rounded-full bg-primary/10" />
+             </div>
+             
+             {/* Bottom Card */}
+             <div className="h-24 w-32 md:h-28 md:w-44 rounded-xl border-2 border-dashed border-primary/60 bg-background/50 backdrop-blur-xs flex items-center justify-center">
+               <div className="h-8 w-8 rounded-full bg-primary/10" />
+             </div>
+           </div>
+
+           {/* Right Panel (Leaderboard) - Hidden on Mobile */}
+           <div className="hidden md:block h-48 w-32 lg:h-64 lg:w-48 rounded-2xl border-2 border-dashed border-primary/40 bg-linear-to-b from-primary/5 to-transparent" />
         </div>
+
         <div className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold uppercase tracking-tight">{title}</h2>
@@ -761,17 +785,17 @@ function RankingControlButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "h-10 md:h-14 w-full md:w-36 rounded-xl md:rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5 px-4 md:px-0",
+        "h-9 md:h-14 w-full md:w-36 rounded-lg md:rounded-2xl border-border/40 hover:border-primary/50 transition-all bg-muted/10 hover:bg-primary/5 group shadow-sm hover:shadow-primary/5 px-2 md:px-0",
         isActive && "bg-primary text-primary-foreground border-primary hover:bg-primary/90 hover:border-primary shadow-lg shadow-primary/25"
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 md:gap-3">
         {icon && (
-          <div className={cn("text-muted-foreground transition-colors", isActive ? "text-primary-foreground" : "group-hover:text-primary")}>
+          <div className={cn("text-muted-foreground transition-colors shrink-0", isActive ? "text-primary-foreground" : "group-hover:text-primary")}>
             {icon}
           </div>
         )}
-        <span className="text-[10px] md:text-xs font-mono uppercase tracking-widest font-black">{label}</span>
+        <span className="text-[8px] md:text-xs font-mono uppercase tracking-widest font-black">{label}</span>
       </div>
     </Button>
   );

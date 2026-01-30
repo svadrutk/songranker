@@ -14,7 +14,6 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { SessionSelector } from "@/components/SessionSelector";
-import { GlobalLeaderboard } from "@/components/GlobalLeaderboard";
 import { cn } from "@/lib/utils";
 
 type ReleaseType = "Album" | "EP" | "Single" | "Other";
@@ -45,6 +44,7 @@ type CatalogProps = Readonly<{
   onStartRanking?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   onSessionDelete?: (sessionId: string) => void;
+  onGlobalLeaderboardOpen?: (artist: string, data: LeaderboardResponse | null, error: string | null) => void;
   selectedIds: string[];
   activeSessionId: string | null;
 }>;
@@ -99,6 +99,7 @@ export function Catalog({
   onStartRanking, 
   onSessionSelect,
   onSessionDelete,
+  onGlobalLeaderboardOpen,
   selectedIds,
   activeSessionId
 }: CatalogProps): JSX.Element {
@@ -114,32 +115,38 @@ export function Catalog({
   const [activeFilters, setActiveFilters] = useState<ReleaseType[]>(["Album"]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Global Leaderboard State
+  // Global Leaderboard State (managed by parent)
   const [globalQuery, setGlobalQuery] = useState("");
   const [globalArtist, setGlobalArtist] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
   const [globalData, setGlobalData] = useState<LeaderboardResponse | null>(null);
-  const [loadingGlobal, setLoadingGlobal] = useState(false);
-  const [globalError, setGlobalError] = useState<string | null>(null);
   
-  // Refetch global leaderboard when switching to global view
+  // Optional: Refetch global leaderboard when switching to global view (disabled for performance)
+  // Only refetch if data is stale (more than 5 minutes old)
   useEffect(() => {
     if (view === "global" && globalArtist && globalData) {
-      // Refetch in background to get latest data
-      const refetch = async () => {
-        try {
-          const data = await getGlobalLeaderboard(globalArtist);
-          if (data) {
-            setGlobalData(data);
+      const lastFetchKey = `global_${globalArtist}_timestamp`;
+      const lastFetch = localStorage.getItem(lastFetchKey);
+      const fiveMinutes = 5 * 60 * 1000;
+      
+      if (!lastFetch || Date.now() - parseInt(lastFetch) > fiveMinutes) {
+        const refetch = async () => {
+          try {
+            const data = await getGlobalLeaderboard(globalArtist);
+            if (data) {
+              setGlobalData(data);
+              localStorage.setItem(lastFetchKey, Date.now().toString());
+            }
+          } catch (err) {
+            console.error("Failed to refetch global leaderboard:", err);
           }
-        } catch (err) {
-          console.error("Failed to refetch global leaderboard:", err);
-        }
-      };
-      refetch();
+        };
+        refetch();
+      }
     }
-  }, [view, globalArtist]); // Note: globalData not in deps to avoid infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, globalArtist]); // Note: globalData intentionally not in deps to avoid infinite loop
 
   // Debounce for global search suggestions
   useEffect(() => {
@@ -170,12 +177,18 @@ export function Catalog({
   }, [globalQuery, view, globalArtist]);
 
   const handleGlobalSearch = async (artistName: string) => {
+    if (!user) {
+      openAuthModal("login");
+      return;
+    }
+
     setGlobalArtist(artistName);
     setGlobalQuery(artistName); // Sync input
     setSuggestions([]);
-    setLoadingGlobal(true);
-    setGlobalError(null);
     setGlobalData(null);
+
+    // Notify parent immediately with loading state
+    onGlobalLeaderboardOpen?.(artistName, null, null);
 
     try {
       // 1. Check if stats exist first (optional optimization, but good UX)
@@ -185,15 +198,16 @@ export function Catalog({
         // If no stats, we can skip fetching full leaderboard or just pass null
         // We'll let the component handle the "no data" state
         setGlobalData(null);
+        onGlobalLeaderboardOpen?.(artistName, null, null);
       } else {
         // 2. Fetch full leaderboard
         const data = await getGlobalLeaderboard(artistName);
         setGlobalData(data);
+        onGlobalLeaderboardOpen?.(artistName, data, null);
       }
     } catch (err) {
-      setGlobalError(err instanceof Error ? err.message : "Failed to load global rankings");
-    } finally {
-      setLoadingGlobal(false);
+      const errorMsg = err instanceof Error ? err.message : "Failed to load global rankings";
+      onGlobalLeaderboardOpen?.(artistName, null, errorMsg);
     }
   };
 
@@ -321,7 +335,7 @@ export function Catalog({
         )}
 
         {view === "global" && (
-           <div className="relative animate-in fade-in slide-in-from-top-1 duration-300 z-50">
+           <form onSubmit={(e) => { e.preventDefault(); handleGlobalSearch(globalQuery); }} className="relative animate-in fade-in slide-in-from-top-1 duration-300 z-50">
              <div className="relative flex gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -334,27 +348,41 @@ export function Catalog({
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       handleGlobalSearch(globalQuery);
                     }
                   }}
                   placeholder="Find global rankings..."
                   className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/10 shadow-sm"
                 />
-                {isSearchingGlobal && (
+                {isSearchingGlobal && user && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                   </div>
                 )}
               </div>
+              <Button type="submit" disabled={isSearchingGlobal} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono relative group">
+                {isSearchingGlobal ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : !user ? (
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-3 w-3" />
+                    <span>Search</span>
+                  </div>
+                ) : (
+                  "Search"
+                )}
+              </Button>
             </div>
             
             {/* Autocomplete Suggestions */}
-            {suggestions.length > 0 && (
+            {suggestions.length > 0 && user && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="py-1">
                   {suggestions.map((artist) => (
                     <button
                       key={artist}
+                      type="button"
                       onClick={() => handleGlobalSearch(artist)}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
                     >
@@ -365,7 +393,7 @@ export function Catalog({
                 </div>
               </div>
             )}
-           </div>
+           </form>
         )}
       </div>
 
@@ -488,21 +516,13 @@ export function Catalog({
             </div>
           )
         ) : view === "global" ? (
-          <div className="animate-in fade-in slide-in-from-bottom-1 duration-300 h-full">
-            {globalArtist ? (
-              <GlobalLeaderboard
-                artist={globalArtist}
-                data={globalData}
-                isLoading={loadingGlobal}
-                error={globalError}
-                onRetry={() => handleGlobalSearch(globalArtist)}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full opacity-20 py-20">
-                <Globe className="h-10 w-10 mb-4" />
-                <p className="text-xs font-mono">Search to see global rankings</p>
-              </div>
-            )}
+          <div className="flex flex-col items-center justify-center h-full opacity-20 py-20">
+            <Globe className="h-10 w-10 mb-4" />
+            <p className="text-xs font-mono text-center px-4">
+              {globalArtist 
+                ? "View global rankings on the right →"
+                : "Search to see global rankings"}
+            </p>
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
