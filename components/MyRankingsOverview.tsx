@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback, type JSX } from "react";
-import { Calendar, CheckCircle2, Layers, Loader2, Music, PlayCircle, Swords, Trophy, ArrowDownAZ, ArrowUpAZ, ArrowDown, ArrowUp } from "lucide-react";
+import { useState, type JSX } from "react";
+import { Calendar, CheckCircle2, Layers, Loader2, Music, PlayCircle, Swords, Trophy, ArrowDownAZ, ArrowUpAZ, ArrowDown, ArrowUp, Clock } from "lucide-react";
 import Image from "next/image";
-import { getUserSessions, type SessionSummary } from "@/lib/api";
+import type { SessionSummary } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
+import { useNavigationStore, useAnalyticsStore } from "@/lib/store";
+import { useUserSessions } from "@/lib/hooks";
 
 const COMPLETION_THRESHOLD = 25;
 /** Same as RankingWidget "View Results" threshold (displayScore >= 90) so completed rankings appear in Completed column. */
@@ -13,44 +15,28 @@ const COMPLETED_THRESHOLD = 90;
 
 type MyRankingsOverviewProps = Readonly<{
   isSidebarCollapsed?: boolean;
-  onSelectSession: (sessionId: string) => void;
-  /** For completed (settled) rankings: open the results (Leaderboard) view directly instead of the session. */
-  onViewResults?: (sessionId: string) => void;
 }>;
 
+type SortField = "completion" | "date" | "artist";
 type SortDir = "asc" | "desc";
 
-export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession, onViewResults }: MyRankingsOverviewProps): JSX.Element {
+export function MyRankingsOverview({ isSidebarCollapsed = false }: MyRankingsOverviewProps): JSX.Element {
+  const { navigateToRanking, navigateToResults } = useNavigationStore();
   const { user } = useAuth();
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [loading, setLoading] = useState(!!user);
+  
+  // React Query for sessions (shared cache with AnalyticsPage)
+  const { data: sessions = [], isLoading: loading } = useUserSessions(user?.id);
+  
+  // Use Zustand store for UI state only
+  const {
+    myRankingsMobileTab: mobileTab,
+    setMyRankingsMobileTab: setMobileTab,
+  } = useAnalyticsStore();
+  
+  // Local UI state
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
-  /** Primary sort: completion % (like GROUP BY completion). */
-  const [completionDir, setCompletionDir] = useState<SortDir>("desc");
-  /** Secondary sort: artist name for tie-breaker (like ORDER BY completion, artist). */
-  const [thenByArtistDir, setThenByArtistDir] = useState<SortDir>("asc");
-
-  const loadSessions = useCallback(async () => {
-    if (!user) {
-      setSessions([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const data = await getUserSessions(user.id);
-      setSessions(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("[MyRankingsOverview] Failed to load sessions:", err);
-      setSessions([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+  const [sortField, setSortField] = useState<SortField>("completion");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   if (!user) {
     return (
@@ -85,15 +71,32 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
     );
   }
 
-  /** Primary sort by completion %, then by artist (tie-breaker). Used for all three zones. */
+  /** Sort sessions by selected field and direction. */
   function sortZone<T extends SessionSummary>(list: T[]): T[] {
     const copy = [...list];
-    const completionMult = completionDir === "asc" ? 1 : -1;
-    const artistMult = thenByArtistDir === "asc" ? 1 : -1;
+    const mult = sortDir === "asc" ? 1 : -1;
+    
     copy.sort((a, b) => {
-      const comp = completionMult * ((a.convergence_score ?? 0) - (b.convergence_score ?? 0));
-      if (comp !== 0) return comp;
-      return artistMult * (a.primary_artist ?? "").localeCompare(b.primary_artist ?? "", undefined, { sensitivity: "base" });
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "completion":
+          comparison = mult * ((a.convergence_score ?? 0) - (b.convergence_score ?? 0));
+          break;
+        case "date":
+          comparison = mult * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          break;
+        case "artist":
+          comparison = mult * (a.primary_artist ?? "").localeCompare(b.primary_artist ?? "", undefined, { sensitivity: "base" });
+          break;
+      }
+      
+      // Tie-breaker: always use date (newest first) when primary sort is equal
+      if (comparison === 0 && sortField !== "date") {
+        comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      
+      return comparison;
     });
     return copy;
   }
@@ -137,8 +140,11 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
           : "text-green-600 dark:text-green-500";
 
     const handleClick = () => {
-      if (openResultsOnClick && onViewResults) onViewResults(session.session_id);
-      else onSelectSession(session.session_id);
+      if (openResultsOnClick) {
+        navigateToResults(session.session_id, "kanban");
+      } else {
+        navigateToRanking(session.session_id);
+      }
     };
 
     return (
@@ -223,88 +229,174 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
         isSidebarCollapsed ? "w-full" : "w-full max-w-5xl mx-auto"
       )}
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 sm:gap-6 shrink-0">
-        <h2 className="text-lg font-black uppercase tracking-tighter italic text-foreground text-center">
-          My rankings
+      <div className="flex flex-col gap-5 shrink-0">
+        <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-foreground text-center">
+          My Rankings
         </h2>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">Sort:</span>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-[9px] font-mono text-muted-foreground/80">Completion %</span>
-              <div className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setCompletionDir("desc")}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors",
-                    completionDir === "desc"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  aria-pressed={completionDir === "desc"}
-                  title="High to low"
-                >
-                  <ArrowDown className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCompletionDir("asc")}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors",
-                    completionDir === "asc"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  aria-pressed={completionDir === "asc"}
-                  title="Low to high"
-                >
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-            <span className="text-muted-foreground/50 text-[10px]">& Artist Name</span>
-            <div className="flex rounded-lg border border-border/60 bg-muted/20 p-0.5">
-              <button
-                type="button"
-                onClick={() => setThenByArtistDir("asc")}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1.5 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors",
-                  thenByArtistDir === "asc"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                aria-pressed={thenByArtistDir === "asc"}
-                title="A–Z"
-              >
-                <ArrowDownAZ className="h-3.5 w-3.5" />
-                A–Z
-              </button>
-              <button
-                type="button"
-                onClick={() => setThenByArtistDir("desc")}
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1.5 rounded-md font-mono text-[10px] uppercase tracking-wider transition-colors",
-                  thenByArtistDir === "desc"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                aria-pressed={thenByArtistDir === "desc"}
-                title="Z–A"
-              >
-                <ArrowUpAZ className="h-3.5 w-3.5" />
-                Z–A
-              </button>
-            </div>
+        
+        {/* Sort Controls */}
+        <div className="flex justify-center">
+          <div className="inline-flex rounded-lg border border-border/60 bg-muted/20 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                if (sortField === "completion") {
+                  setSortDir(sortDir === "desc" ? "asc" : "desc");
+                } else {
+                  setSortField("completion");
+                  setSortDir("desc");
+                }
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-md font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all",
+                sortField === "completion"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-pressed={sortField === "completion"}
+              title={sortField === "completion" ? (sortDir === "desc" ? "Click for Low → High" : "Click for High → Low") : "Sort by Completion"}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              <span>Completion</span>
+              {sortField === "completion" && (
+                sortDir === "desc" ? <ArrowDown className="h-3 w-3 ml-0.5 shrink-0" /> : <ArrowUp className="h-3 w-3 ml-0.5 shrink-0" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (sortField === "date") {
+                  setSortDir(sortDir === "desc" ? "asc" : "desc");
+                } else {
+                  setSortField("date");
+                  setSortDir("desc");
+                }
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-md font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all",
+                sortField === "date"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-pressed={sortField === "date"}
+              title={sortField === "date" ? (sortDir === "desc" ? "Click for Oldest First" : "Click for Newest First") : "Sort by Date"}
+            >
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <span>Date</span>
+              {sortField === "date" && (
+                sortDir === "desc" ? <ArrowDown className="h-3 w-3 ml-0.5 shrink-0" /> : <ArrowUp className="h-3 w-3 ml-0.5 shrink-0" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (sortField === "artist") {
+                  setSortDir(sortDir === "desc" ? "asc" : "desc");
+                } else {
+                  setSortField("artist");
+                  setSortDir("asc");
+                }
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-2 sm:px-3 py-2.5 rounded-md font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all",
+                sortField === "artist"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-pressed={sortField === "artist"}
+              title={sortField === "artist" ? (sortDir === "asc" ? "Click for Z → A" : "Click for A → Z") : "Sort by Artist"}
+            >
+              <Music className="h-3.5 w-3.5 shrink-0" />
+              <span>Artist</span>
+              {sortField === "artist" && (
+                sortDir === "asc" ? <ArrowDownAZ className="h-3 w-3 ml-0.5 shrink-0" /> : <ArrowUpAZ className="h-3 w-3 ml-0.5 shrink-0" />
+              )}
+            </button>
           </div>
         </div>
       </div>
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3 flex-1 min-h-0 min-w-0">
+
+      {/* Mobile: Tab Navigation */}
+      <div className="sm:hidden flex flex-col gap-3 flex-1 min-h-0">
+        <div className="flex bg-muted/20 p-1 rounded-lg border border-border/40 shrink-0">
+          <button
+            type="button"
+            onClick={() => setMobileTab("draft")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
+              mobileTab === "draft" ? "bg-background shadow-xs text-primary" : "text-muted-foreground"
+            )}
+          >
+            Not Started ({draftSessions.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("progress")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
+              mobileTab === "progress" ? "bg-background shadow-xs text-primary" : "text-muted-foreground"
+            )}
+          >
+            In Progress ({incompleteSessions.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab("settled")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
+              mobileTab === "settled" ? "bg-background shadow-xs text-primary" : "text-muted-foreground"
+            )}
+          >
+            Complete ({completedSessions.length})
+          </button>
+        </div>
+        <div className="flex flex-col gap-3 overflow-y-auto flex-1 min-h-0">
+          {mobileTab === "draft" && (
+            <>
+              {draftSessions.map((session) => (
+                <SessionCard key={session.session_id} session={session} />
+              ))}
+              {draftSessions.length === 0 && (
+                <p className="text-xs font-mono text-muted-foreground/80 py-8 text-center">
+                  No rankings yet
+                </p>
+              )}
+            </>
+          )}
+          {mobileTab === "progress" && (
+            <>
+              {incompleteSessions.map((session) => (
+                <SessionCard key={session.session_id} session={session} />
+              ))}
+              {incompleteSessions.length === 0 && (
+                <p className="text-xs font-mono text-muted-foreground/80 py-8 text-center">
+                  No rankings in progress
+                </p>
+              )}
+            </>
+          )}
+          {mobileTab === "settled" && (
+            <>
+              {completedSessions.map((session) => (
+                <SessionCard key={session.session_id} session={session} openResultsOnClick />
+              ))}
+              {completedSessions.length === 0 && (
+                <p className="text-xs font-mono text-muted-foreground/80 py-8 text-center">
+                  No completed rankings yet
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop: Kanban Columns */}
+      <div className="hidden sm:grid gap-4 grid-cols-3 flex-1 min-h-0 min-w-0">
         <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
           <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest text-center shrink-0">
-            Draft zone
+            Not Started
           </p>
-          <div className="flex flex-col gap-3 overflow-y-auto min-h-0" key={`draft-${completionDir}-${thenByArtistDir}`}>
+          <div className="flex flex-col gap-3 overflow-y-auto min-h-0" key={`draft-${sortField}-${sortDir}`}>
             {draftSessions.map((session) => (
               <SessionCard key={session.session_id} session={session} />
             ))}
@@ -317,9 +409,9 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
         </div>
         <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
           <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest text-center shrink-0">
-            Progress zone
+            In Progress
           </p>
-          <div className="flex flex-col gap-3 overflow-y-auto min-h-0" key={`progress-${completionDir}-${thenByArtistDir}`}>
+          <div className="flex flex-col gap-3 overflow-y-auto min-h-0" key={`progress-${sortField}-${sortDir}`}>
             {incompleteSessions.map((session) => (
               <SessionCard key={session.session_id} session={session} />
             ))}
@@ -332,11 +424,11 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
         </div>
         <div className="flex flex-col gap-3 min-h-0 overflow-hidden">
           <p className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest text-center shrink-0">
-            Settled zone
+            Complete
           </p>
-          <div className="flex flex-col gap-3 overflow-y-auto min-h-0" key={`settled-${completionDir}-${thenByArtistDir}`}>
+          <div className="flex flex-col gap-3 overflow-y-auto min-h-0" key={`settled-${sortField}-${sortDir}`}>
             {completedSessions.map((session) => (
-              <SessionCard key={session.session_id} session={session} openResultsOnClick={!!onViewResults} />
+              <SessionCard key={session.session_id} session={session} openResultsOnClick />
             ))}
             {completedSessions.length === 0 && (
               <p className="text-xs font-mono text-muted-foreground/80 py-4 text-center">

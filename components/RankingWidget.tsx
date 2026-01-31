@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, type SessionSong } from "@/lib/api";
 import { getNextPair } from "@/lib/pairing";
 import { calculateNewRatings, calculateKFactor } from "@/lib/elo";
-import { Music, LogIn, Loader2, Trophy, Scale, Meh, Sword, ChartNetwork, Eye, RotateCcw } from "lucide-react";
+import { Music, LogIn, Loader2, Trophy, Scale, Meh, Sword, ChartNetwork, Eye, RotateCcw, X } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { RankingCard } from "@/components/RankingCard";
 import { Leaderboard } from "@/components/Leaderboard";
@@ -16,11 +16,17 @@ import { Leaderboard } from "@/components/Leaderboard";
 type RankingWidgetProps = Readonly<{
   isRanking?: boolean;
   sessionId?: string | null;
+  /** When true, load session and show Leaderboard (results) directly instead of duel UI. */
+  openInResultsView?: boolean;
+  /** When openInResultsView, called when user taps "Keep Ranking" / back from results (e.g. return to My Rankings). */
+  onBackFromResults?: () => void;
 }>;
 
 export function RankingWidget({
   isRanking,
   sessionId,
+  openInResultsView = false,
+  onBackFromResults,
 }: RankingWidgetProps): JSX.Element {
   const { user, openAuthModal } = useAuth();
   const isMounted = useRef(true);
@@ -119,6 +125,7 @@ export function RankingWidget({
           setConvergence(detail.convergence_score ?? 0);
           setCurrentPair(getNextPair(detail.songs));
           lastPairLoadTime.current = Date.now();
+          if (openInResultsView) setIsFinished(true);
         }
       } catch (error) {
         console.error("Failed to load ranking songs:", error);
@@ -133,7 +140,7 @@ export function RankingWidget({
     return () => {
       isCurrent = false;
     };
-  }, [isRanking, sessionId]);
+  }, [isRanking, sessionId, openInResultsView]);
 
   const quantityTarget = Math.max(1, songs.length * 1.5);
   const quantityProgress = Math.min(100, (totalDuels / quantityTarget) * 100);
@@ -362,9 +369,11 @@ export function RankingWidget({
 
   if (isFinished) {
     return (
-      <Leaderboard 
-        songs={songs} 
-        onContinue={() => setIsFinished(false)} 
+      <Leaderboard
+        songs={songs}
+        onContinue={openInResultsView && onBackFromResults ? onBackFromResults : () => setIsFinished(false)}
+        isPreview={false}
+        backButtonLabel={openInResultsView ? "Back to My Rankings" : undefined}
       />
     );
   }
@@ -385,7 +394,7 @@ export function RankingWidget({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full h-full max-w-5xl bg-background border border-primary/10 rounded-[2rem] shadow-2xl overflow-hidden relative"
+              className="w-full h-full max-w-2xl bg-background border border-primary/10 rounded-[2rem] shadow-2xl overflow-hidden relative"
             >
               <Leaderboard 
                 songs={songs} 
@@ -394,7 +403,7 @@ export function RankingWidget({
               />
               <div className="absolute top-4 right-4 z-50">
                 <Button variant="ghost" size="icon" onClick={() => setShowPeek(false)} className="rounded-full">
-                  <RotateCcw className="h-6 w-6" />
+                  <X className="h-6 w-6" />
                 </Button>
               </div>
             </motion.div>
@@ -443,7 +452,7 @@ export function RankingWidget({
             <SpeedLines side="right" />
           </div>
 
-          <div className="flex items-center justify-center gap-3 md:gap-6 text-[10px] md:text-xs lg:text-sm font-mono text-muted-foreground/60 uppercase font-bold">
+          <div className="flex items-center justify-center gap-2 md:gap-3 text-[10px] md:text-xs lg:text-sm font-mono text-muted-foreground/60 uppercase font-bold">
             <StatBadge 
               icon={<div className="h-2 w-2 md:h-2.5 md:w-2.5 rounded-full bg-primary animate-pulse" />} 
               label={`${songs.length} Tracks`} 
@@ -585,7 +594,7 @@ function StatBadge({ icon, label }: { icon: React.ReactNode; label: string }): J
   return (
     <div className="flex items-center gap-2 md:gap-3 px-3 md:px-5 py-1 md:py-1.5 rounded-full border border-border/40 bg-muted/10 backdrop-blur-sm shadow-sm">
       {icon}
-      <span className="tracking-[0.1em] md:tracking-[0.2em]">{label}</span>
+      <span>{label}</span>
     </div>
   );
 }

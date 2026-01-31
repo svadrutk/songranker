@@ -114,6 +114,16 @@ export type ArtistSuggestion = {
   name: string;
 };
 
+export type ArtistWithLeaderboard = {
+  artist: string;
+  total_comparisons: number;
+  last_updated: string | null;
+};
+
+export type ArtistsWithLeaderboardsResponse = {
+  artists: ArtistWithLeaderboard[];
+};
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 // Helper to show errors visually
@@ -277,6 +287,37 @@ export async function suggestArtists(query: string): Promise<string[]> {
   } catch (error) {
     console.error("[API] Error fetching artist suggestions:", error);
     return [];
+  }
+}
+
+export async function getArtistsWithLeaderboards(limit: number = 50): Promise<ArtistWithLeaderboard[]> {
+  try {
+    const data = await fetchBackend<ArtistsWithLeaderboardsResponse>(
+      `/leaderboard/artists?limit=${limit}`,
+      { cache: "no-store" }
+    );
+    return data.artists ?? [];
+  } catch (error) {
+    console.error("[API] Error fetching artists with leaderboards:", error);
+    return [];
+  }
+}
+
+export type GlobalActivityStats = {
+  total_sessions: number;
+  total_comparisons: number;
+  artists_ranked: number;
+  avg_convergence: number;
+  completed_sessions: number;
+  completion_rate: number;
+};
+
+export async function getGlobalActivityStats(): Promise<GlobalActivityStats | null> {
+  try {
+    return await fetchBackend<GlobalActivityStats>("/activity/global", { cache: "no-store" });
+  } catch (error) {
+    console.error("[API] Error fetching global activity stats:", error);
+    return null;
   }
 }
 

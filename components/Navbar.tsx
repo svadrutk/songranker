@@ -5,16 +5,27 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Send } from "lucide-react";
 import Image from "next/image";
 import { useFeedback } from "./FeedbackProvider";
+import { useNavigationStore } from "@/lib/store";
 
 export function Navbar() {
   const { user, signOut, openAuthModal } = useAuth();
   const { openFeedback } = useFeedback();
+  const { navigateToCatalog, setSidebarCollapsed } = useNavigationStore();
+
+  const handleLogoClick = () => {
+    navigateToCatalog();
+    setSidebarCollapsed(false);
+  };
 
   return (
-    <nav className="w-full border-b bg-background/95 backdrop-blur-md sticky top-0 z-40">
+    <nav className="w-full border-b bg-background/95 backdrop-blur-md sticky top-0 z-[60]">
       <div className="w-full px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="p-1.5 md:p-2 rounded-lg bg-primary dark:bg-transparent">
+        <button
+          type="button"
+          onClick={handleLogoClick}
+          className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity"
+        >
+          <div className="p-2 md:p-3 rounded-lg bg-black">
             <Image
               src="/logo/logo.svg"
               alt="Chorusboard Logo"
@@ -26,7 +37,7 @@ export function Navbar() {
           <h1 className="font-mono text-xl md:text-3xl font-bold tracking-tighter lowercase shrink-0">
             chorusboard
           </h1>
-        </div>
+        </button>
 
         <div className="flex items-center gap-2 md:gap-6">
           <Button

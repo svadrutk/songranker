@@ -1,24 +1,20 @@
 "use client";
 
 import { useState, useMemo, useEffect, type JSX } from "react";
-import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X, Lock, History, Globe } from "lucide-react";
+import { Search, CheckCircle2, ChevronDown, ChevronUp, Layers, X, History, ListMusic, BarChart2, Calendar, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
-import { 
-  searchArtistReleaseGroups, 
-  getReleaseGroupTracks, 
-  getGlobalLeaderboard,
-  getLeaderboardStats,
-  suggestArtists,
-  type ReleaseGroup,
-  type LeaderboardResponse
-} from "@/lib/api";
+import { searchArtistReleaseGroups, getReleaseGroupTracks, suggestArtists, type ReleaseGroup } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
+import Image from "next/image";
 import { SessionSelector } from "@/components/SessionSelector";
 import { cn } from "@/lib/utils";
+import { useCatalogStore } from "@/lib/store";
+import { useUserSessions } from "@/lib/hooks";
+
+const COMPLETED_THRESHOLD = 90;
 
 type ReleaseType = "Album" | "EP" | "Single" | "Other";
-type CatalogView = "search" | "rankings" | "global";
 
 function LoadingSkeleton(): JSX.Element {
   return (
@@ -44,51 +40,64 @@ type CatalogProps = Readonly<{
   onSearchStart?: () => void;
   onStartRanking?: () => void;
   onSessionSelect?: (sessionId: string) => void;
+  /** When provided, completed rankings in the My Rankings tab open directly in results (leaderboard) view. */
+  onViewResults?: (sessionId: string) => void;
   onSessionDelete?: (sessionId: string) => void;
-  onGlobalLeaderboardOpen?: (artist: string, data: LeaderboardResponse | null, error: string | null) => void;
+  onAnalyticsOpen?: () => void;
+  onRankingsOpen?: () => void;
+  showAnalyticsPanel?: boolean;
+  showRankingsPanel?: boolean;
   selectedIds: string[];
   activeSessionId: string | null;
 }>;
 
 type ViewToggleProps = Readonly<{
-  view: CatalogView;
-  setView: (view: CatalogView) => void;
+  onAnalyticsOpen?: () => void;
+  onRankingsOpen?: () => void;
 }>;
 
-function ViewToggle({ view, setView }: ViewToggleProps): JSX.Element {
+function ViewToggle({ onAnalyticsOpen, onRankingsOpen }: ViewToggleProps): JSX.Element {
+  const { catalogView, setCatalogView } = useCatalogStore();
+  
   return (
     <div className="flex bg-muted/20 p-1 rounded-lg border border-border/40">
       <button
-        onClick={() => setView("search")}
+        onClick={() => setCatalogView("search")}
         className={cn(
           "flex-1 flex items-center justify-center gap-2 py-2 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
-          view === "search" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
+          catalogView === "search" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
         )}
       >
         <Search className="h-3 w-3" />
-        <span className="hidden sm:inline">Search</span>
+        <span>Search</span>
       </button>
       <button
-        onClick={() => setView("rankings")}
+        onClick={() => {
+          setCatalogView("rankings");
+          onRankingsOpen?.();
+        }}
         className={cn(
           "flex-1 flex items-center justify-center gap-2 py-2 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
-          view === "rankings" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
+          catalogView === "rankings" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <History className="h-3 w-3" />
+        <ListMusic className="h-3 w-3" />
         <span className="hidden sm:inline">My Rankings</span>
         <span className="sm:hidden">Rankings</span>
       </button>
       <button
-        onClick={() => setView("global")}
+        onClick={() => {
+          setCatalogView("analytics");
+          onAnalyticsOpen?.();
+        }}
         className={cn(
           "flex-1 flex items-center justify-center gap-2 py-2 rounded-md font-mono text-[10px] uppercase font-bold tracking-widest transition-all",
-          view === "global" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
+          catalogView === "analytics" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <Globe className="h-3 w-3" />
-        <span className="hidden sm:inline">Global</span>
-        <span className="sm:hidden">Global</span>
+        <BarChart2 className="h-3 w-3" />
+        <span className="hidden sm:inline">Analytics</span>
+        <span className="sm:hidden">Stats</span>
       </button>
     </div>
   );
@@ -99,190 +108,118 @@ export function Catalog({
   onSearchStart, 
   onStartRanking, 
   onSessionSelect,
+  onViewResults,
   onSessionDelete,
-  onGlobalLeaderboardOpen,
+  onAnalyticsOpen,
+  onRankingsOpen,
+  showAnalyticsPanel = false,
+  showRankingsPanel = false,
   selectedIds,
   activeSessionId
 }: CatalogProps): JSX.Element {
   const { user, openAuthModal } = useAuth();
-  const [view, setView] = useState<CatalogView>("search");
   
-  // Catalog Search State
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<ReleaseGroup[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [tracksCache, setTracksCache] = useState<Record<string, string[]>>({});
-  const [loadingTracks, setLoadingTracks] = useState<Record<string, boolean>>({});
-  const [activeFilters, setActiveFilters] = useState<ReleaseType[]>(["Album"]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Zustand catalog state
+  const {
+    catalogView,
+    setCatalogView,
+    query,
+    setQuery,
+    results,
+    setResults,
+    loading,
+    setLoading,
+    tracksCache,
+    updateTracksCache,
+    loadingTracks,
+    updateLoadingTracks,
+    activeFilters,
+    toggleFilter,
+    expandedId,
+    setExpandedId,
+    suggestions,
+    setSuggestions,
+    showSuggestions,
+    setShowSuggestions,
+    loadingSuggestions,
+    setLoadingSuggestions,
+  } = useCatalogStore();
 
-  // Global Leaderboard State (managed by parent)
-  const [globalQuery, setGlobalQuery] = useState("");
-  const [globalArtist, setGlobalArtist] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
-  const [globalData, setGlobalData] = useState<LeaderboardResponse | null>(null);
-  
-  // Optional: Refetch global leaderboard when switching to global view (disabled for performance)
-  // Only refetch if data is stale (more than 5 minutes old)
+  // React Query for sessions (shared cache with AnalyticsPage, MyRankingsOverview)
+  const { data: sessions = [], isLoading: loadingSessions } = useUserSessions(user?.id);
+
+  // When parent opens analytics or rankings panel, keep that tab selected in sidebar (single dep so array size is stable)
+  // When neither is active (e.g., RankingWidget is open), reset to search view
+  const activePanel = showAnalyticsPanel ? "analytics" : showRankingsPanel ? "rankings" : null;
   useEffect(() => {
-    if (view === "global" && globalArtist && globalData) {
-      const lastFetchKey = `global_${globalArtist}_timestamp`;
-      const lastFetch = localStorage.getItem(lastFetchKey);
-      const fiveMinutes = 5 * 60 * 1000;
-      
-      if (!lastFetch || Date.now() - parseInt(lastFetch) > fiveMinutes) {
-        const refetch = async () => {
-          try {
-            const data = await getGlobalLeaderboard(globalArtist);
-            if (data) {
-              setGlobalData(data);
-              localStorage.setItem(lastFetchKey, Date.now().toString());
-            }
-          } catch (err) {
-            console.error("Failed to refetch global leaderboard:", err);
-          }
-        };
-        refetch();
-      }
+    if (activePanel === "analytics") setCatalogView("analytics");
+    else if (activePanel === "rankings") setCatalogView("rankings");
+    else if (activePanel === null) setCatalogView("search");
+  }, [activePanel, setCatalogView]);
+
+  // Derive completed rankings from sessions
+  const rankingResults = useMemo(() => {
+    return sessions
+      .filter((s) => (s.convergence_score ?? 0) >= COMPLETED_THRESHOLD)
+      .sort((a, b) => (b.convergence_score ?? 0) - (a.convergence_score ?? 0));
+  }, [sessions]);
+  
+  const loadingRankingResults = loadingSessions;
+  const [rankingResultsImageErrors, setRankingResultsImageErrors] = useState<Record<string, boolean>>({});
+
+  // Fetch suggestions when query changes
+  useEffect(() => {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, globalArtist]); // Note: globalData intentionally not in deps to avoid infinite loop
 
-  // Debounce for global search suggestions
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      const cleanQuery = globalQuery.trim().toLowerCase();
-      if (cleanQuery.length < 2 || view !== "global" || globalArtist?.toLowerCase() === cleanQuery) {
-        setSuggestions([]);
-        return;
-      }
-      
-      // 1. Check LocalStorage Cache (Offline/Speed)
-      const CACHE_KEY = "sr_artist_suggestions";
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        try {
-          const { data, timestamp } = JSON.parse(cached);
-          const isStale = Date.now() - timestamp > 4 * 60 * 60 * 1000; // 4 hours
-          
-          if (!isStale) {
-            // Filter existing cache for instant matches
-            const matches = data.filter((name: string) => 
-              name.toLowerCase().includes(cleanQuery)
-            ).slice(0, 5);
-            
-            if (matches.length > 0) {
-              setSuggestions(matches);
-              // If we have good matches, we can skip the network call or just let it update in background
-              // For now, let's just return if we have matches to save bandwidth
-              return;
-            }
-          }
-        } catch {
-          localStorage.removeItem(CACHE_KEY);
+    let cancelled = false;
+    setLoadingSuggestions(true);
+    
+    suggestArtists(trimmedQuery)
+      .then((names) => {
+        if (!cancelled) {
+          setSuggestions(names);
+          setShowSuggestions(names.length > 0);
         }
-      }
+      })
+      .catch(() => {
+        if (!cancelled) setSuggestions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSuggestions(false);
+      });
 
-      setIsSearchingGlobal(true);
-      try {
-        const data = await suggestArtists(globalQuery);
-        setSuggestions(data);
-        
-        // Update LocalStorage cache
-        const currentCache = cached ? JSON.parse(cached).data : [];
-        const updatedData = Array.from(new Set([...currentCache, ...data])).slice(-100); // Keep last 100
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-          data: updatedData,
-          timestamp: Date.now()
-        }));
-      } catch (err) {
-        console.error("Failed to fetch suggestions:", err);
-      } finally {
-        setIsSearchingGlobal(false);
-      }
-    }, 500);
+    return () => {
+      cancelled = true;
+    };
+  }, [query, setSuggestions, setShowSuggestions, setLoadingSuggestions]);
 
-    return () => clearTimeout(timer);
-  }, [globalQuery, view, globalArtist]);
-
-  const handleGlobalSearch = async (artistName: string) => {
+  const handleSuggestionClick = (suggestion: string) => {
+    setQuery(suggestion);
+    setShowSuggestions(false);
+    
     if (!user) {
       openAuthModal("login");
       return;
     }
-
-    setGlobalArtist(artistName);
-    setGlobalQuery(artistName); // Sync input
-    setSuggestions([]);
-    setGlobalData(null);
-
-    // Notify parent immediately with loading state
-    onGlobalLeaderboardOpen?.(artistName, null, null);
-
-    try {
-      // 1. Check if stats exist first (optional optimization, but good UX)
-      const stats = await getLeaderboardStats(artistName);
-      
-      if (!stats) {
-        // No stats means not enough rankings exist
-        setGlobalData(null);
-        onGlobalLeaderboardOpen?.(artistName, null, `Not enough rankings available for ${artistName}`);
-      } else {
-        // 2. Fetch full leaderboard
-        const data = await getGlobalLeaderboard(artistName);
-        setGlobalData(data);
-        onGlobalLeaderboardOpen?.(artistName, data, null);
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Failed to load global rankings";
-      onGlobalLeaderboardOpen?.(artistName, null, errorMsg);
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
-    if (!user) {
-      openAuthModal("login");
-      return;
-    }
-
+    
+    // Auto-submit the search
     setLoading(true);
     setResults([]);
     setExpandedId(null);
     onSearchStart?.();
-    try {
-      const data = await searchArtistReleaseGroups(query);
-      // Deduplicate results by ID to prevent duplicate key errors
-      const uniqueData = Array.from(new Map(data.map(item => [item.id, item])).values());
-      setResults(uniqueData);
-    } catch (error) {
-      console.error("Search failed:", error);
-    } finally {
-      setLoading(false);
-    }
+    searchArtistReleaseGroups(suggestion)
+      .then((data) => {
+        const uniqueData = Array.from(new Map(data.map(item => [item.id, item])).values());
+        setResults(uniqueData);
+      })
+      .catch((error) => console.error("Search failed:", error))
+      .finally(() => setLoading(false));
   };
-
-  const toggleFilter = (type: ReleaseType) => {
-    setActiveFilters(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type) 
-        : [...prev, type]
-    );
-  };
-
-  const filteredResults = useMemo(() => {
-    const activeFiltersLower = new Set(activeFilters.map((f) => f.toLowerCase()));
-    const mainTypes = new Set(["album", "ep", "single"]);
-
-    return results.filter((release) => {
-      const type = (release.type || "Other").toLowerCase();
-      if (activeFiltersLower.has(type)) return true;
-      return activeFiltersLower.has("other") && !mainTypes.has(type);
-    });
-  }, [results, activeFilters]);
 
   const handleSelect = async (rg: ReleaseGroup) => {
     if (!user) {
@@ -300,23 +237,23 @@ export function Catalog({
       // Background fetch tracks if not in cache
       let trackList = tracksCache[rg.id];
       if (!trackList && !loadingTracks[rg.id]) {
-        setLoadingTracks((prev) => ({ ...prev, [rg.id]: true }));
+        updateLoadingTracks(rg.id, true);
         try {
           trackList = await getReleaseGroupTracks(rg.id);
-          setTracksCache((prev) => ({ ...prev, [rg.id]: trackList }));
+          updateTracksCache(rg.id, trackList);
           // Update the parent with the full tracklist once ready
           onToggle(rg, trackList);
         } catch (error) {
           console.error("Failed to fetch tracks:", error);
         } finally {
-          setLoadingTracks((prev) => ({ ...prev, [rg.id]: false }));
+          updateLoadingTracks(rg.id, false);
         }
       }
       return;
     }
 
     // If already selected, clicking toggles expansion
-    setExpandedId((prev) => (prev === rg.id ? null : rg.id));
+    setExpandedId(expandedId === rg.id ? null : rg.id);
   };
 
   const handleRemove = (e: React.MouseEvent, rg: ReleaseGroup) => {
@@ -324,6 +261,17 @@ export function Catalog({
     onToggle(rg, []);
     if (expandedId === rg.id) setExpandedId(null);
   };
+
+  const filteredResults = useMemo(() => {
+    const activeFiltersLower = new Set(activeFilters.map((f) => f.toLowerCase()));
+    const mainTypes = new Set(["album", "ep", "single"]);
+
+    return results.filter((release) => {
+      const type = (release.type || "Other").toLowerCase();
+      if (activeFiltersLower.has(type)) return true;
+      return activeFiltersLower.has("other") && !mainTypes.has(type);
+    });
+  }, [results, activeFilters]);
 
   const isAnyTrackLoading = useMemo(() => 
     selectedIds.some(id => loadingTracks[id]), 
@@ -334,100 +282,55 @@ export function Catalog({
     <div className="flex flex-col h-full gap-6 overflow-hidden relative">
       <div className="flex flex-col gap-4">
         {/* View Toggle */}
-        <ViewToggle view={view} setView={setView} />
+        <ViewToggle onAnalyticsOpen={onAnalyticsOpen} onRankingsOpen={onRankingsOpen} />
 
-        {view === "search" && (
-          <form onSubmit={handleSearch} className="flex gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+        {catalogView === "search" && (
+          <div className="flex gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground z-10" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
+                }}
+                onBlur={() => {
+                  // Delay to allow click on suggestion
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
                 placeholder="Search artist..."
                 className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm"
               />
-            </div>
-            <Button type="submit" disabled={loading} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono relative group">
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : !user ? (
-                <div className="flex items-center gap-2">
-                  <Lock className="h-3 w-3" />
-                  <span>Search</span>
-                </div>
-              ) : (
-                "Search"
+              
+              {/* Loading indicator */}
+              {loadingSuggestions && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin z-10" />
               )}
-            </Button>
-          </form>
-        )}
-
-        {view === "global" && (
-           <form onSubmit={(e) => { e.preventDefault(); handleGlobalSearch(globalQuery); }} className="relative animate-in fade-in slide-in-from-top-1 duration-300 z-50">
-             <div className="relative flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={globalQuery}
-                  onChange={(e) => {
-                    setGlobalQuery(e.target.value);
-                    if (!e.target.value) setSuggestions([]);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleGlobalSearch(globalQuery);
-                    }
-                  }}
-                  placeholder="Find global rankings..."
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-10 py-2 text-sm transition-all focus-visible:outline-none focus-visible:border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/10 shadow-sm"
-                />
-                {isSearchingGlobal && user && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-              <Button type="submit" disabled={isSearchingGlobal} className="px-5 h-10 bg-neutral-300 hover:bg-neutral-400 text-black font-mono relative group">
-                {isSearchingGlobal ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : !user ? (
-                  <div className="flex items-center gap-2">
-                    <Lock className="h-3 w-3" />
-                    <span>Search</span>
-                  </div>
-                ) : (
-                  "Search"
-                )}
-              </Button>
-            </div>
-            
-            {/* Autocomplete Suggestions */}
-            {suggestions.length > 0 && user && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="py-1">
-                  {suggestions.map((artist) => (
+              
+              {/* Suggestions dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {suggestions.map((suggestion, index) => (
                     <button
-                      key={artist}
+                      key={index}
                       type="button"
-                      onClick={() => handleGlobalSearch(artist)}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-accent transition-colors first:rounded-t-md last:rounded-b-md"
                     >
-                      <Search className="h-3 w-3 text-muted-foreground/50" />
-                      <span className="font-medium">{artist}</span>
+                      {suggestion}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-           </form>
+              )}
+            </div>
+          </div>
         )}
+
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar pb-24">
-        {view === "search" ? (
+        {catalogView === "search" ? (
           loading ? (
             <div className="space-y-3">
               <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1">Catalog Loading...</h2>
@@ -544,14 +447,85 @@ export function Catalog({
               <p className="text-xs font-mono">Search to browse catalog</p>
             </div>
           )
-        ) : view === "global" ? (
-          <div className="flex flex-col items-center justify-center h-full opacity-20 py-20">
-            <Globe className="h-10 w-10 mb-4" />
-            <p className="text-xs font-mono text-center px-4">
-              {globalArtist 
-                ? "View global rankings on the right →"
-                : "Search to see global rankings"}
+        ) : catalogView === "analytics" ? (
+          <div className="flex flex-col items-center justify-center h-full opacity-80 py-20 animate-in fade-in duration-300">
+            <BarChart2 className="h-10 w-10 mb-4 text-primary" />
+            <p className="text-xs font-mono text-center px-4 text-muted-foreground">
+              Analytics open on the right →
             </p>
+            <p className="text-[10px] font-mono text-muted-foreground/70 mt-1">
+              Global &amp; user stats
+            </p>
+          </div>
+        ) : catalogView === "rankings" ? (
+          <div className="flex flex-col gap-2 pr-2 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
+            <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2 shrink-0">
+              Completed Rankings
+            </h2>
+            {loadingRankingResults ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="text-xs font-mono uppercase tracking-widest">Loading…</p>
+              </div>
+            ) : rankingResults.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-center px-4">
+                <History className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-xs font-mono text-muted-foreground">No completed rankings yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {rankingResults.map((session) => (
+                  <button
+                    key={session.session_id}
+                    type="button"
+                    onClick={() => (onViewResults ?? onSessionSelect)?.(session.session_id)}
+                    className={cn(
+                      "w-full group flex items-center gap-3 pt-3 px-3 pb-4 rounded-md border transition-all text-left",
+                      activeSessionId === session.session_id
+                        ? "border-primary/40 bg-primary/5 shadow-xs"
+                        : "bg-card border-transparent hover:bg-muted/50 hover:border-border"
+                    )}
+                  >
+                    <div className="relative w-10 h-10 shrink-0 rounded overflow-hidden bg-muted/20">
+                      {(session.top_album_covers ?? []).length > 0 && !rankingResultsImageErrors[session.session_id] ? (
+                        <Image
+                          src={(session.top_album_covers ?? [])[0]}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                          onError={() => setRankingResultsImageErrors((prev) => ({ ...prev, [session.session_id]: true }))}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Layers className="h-5 w-5 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className={cn(
+                        "font-mono text-xs font-bold truncate block",
+                        activeSessionId === session.session_id ? "text-primary" : ""
+                      )}>
+                        {session.primary_artist}
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 opacity-50" />
+                          {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(session.created_at))}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 opacity-50" />
+                          {session.convergence_score ?? 0}%
+                        </span>
+                      </div>
+                    </div>
+                    <BarChart2 className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
@@ -564,7 +538,7 @@ export function Catalog({
         )}
       </div>
 
-      {view === "search" && selectedIds.length > 0 && (
+      {catalogView === "search" && selectedIds.length > 0 && (
         <div className="absolute bottom-4 md:bottom-6 left-0 right-0 px-4 md:px-6 animate-in slide-in-from-bottom-4">
           <Button 
             onClick={() => onStartRanking?.()}
