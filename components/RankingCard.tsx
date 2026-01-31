@@ -82,7 +82,7 @@ export function RankingCard({
       className={cn(
         "group relative flex flex-row md:flex-col items-center gap-4 md:gap-0 w-full max-w-[360px] md:max-w-[520px] rounded-[1.5rem] md:rounded-[3.5rem] p-3 md:p-6 transition-all duration-300 outline-none shrink min-w-0 md:min-w-[280px]",
         "bg-card/90 hover:bg-card border border-border shadow-xl",
-        "dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 dark:border-white/5 dark:shadow-2xl",
+        "dark:bg-zinc-900/30 dark:hover:bg-zinc-900/50 dark:border-white/5 dark:shadow-[0_0_40px_-8px_rgba(255,255,255,0.18),0_10px_40px_-15px_rgba(0,0,0,0.4)]",
         "focus-visible:ring-2 focus-visible:ring-primary/50",
         isActive && "ring-2 ring-primary/20",
         isWinner && "z-10",
