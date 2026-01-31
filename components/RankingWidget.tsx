@@ -16,11 +16,17 @@ import { Leaderboard } from "@/components/Leaderboard";
 type RankingWidgetProps = Readonly<{
   isRanking?: boolean;
   sessionId?: string | null;
+  /** When true, load session and show Leaderboard (results) directly instead of duel UI. */
+  openInResultsView?: boolean;
+  /** When openInResultsView, called when user taps "Keep Ranking" / back from results (e.g. return to My Rankings). */
+  onBackFromResults?: () => void;
 }>;
 
 export function RankingWidget({
   isRanking,
   sessionId,
+  openInResultsView = false,
+  onBackFromResults,
 }: RankingWidgetProps): JSX.Element {
   const { user, openAuthModal } = useAuth();
   const isMounted = useRef(true);
@@ -128,6 +134,7 @@ export function RankingWidget({
           setConvergence(detail.convergence_score ?? 0);
           setCurrentPair(getNextPair(detail.songs));
           lastPairLoadTime.current = Date.now();
+          if (openInResultsView) setIsFinished(true);
         }
       } catch (error) {
         if (isCurrent) {
@@ -144,7 +151,7 @@ export function RankingWidget({
     return () => {
       isCurrent = false;
     };
-  }, [isRanking, sessionId]);
+  }, [isRanking, sessionId, openInResultsView]);
 
   const quantityTarget = Math.max(1, songs.length * 1.5);
   const quantityProgress = Math.min(100, (totalDuels / quantityTarget) * 100);
@@ -435,9 +442,11 @@ function KeyboardShortcutsHelp(): JSX.Element {
 
   if (isFinished) {
     return (
-      <Leaderboard 
-        songs={songs} 
-        onContinue={() => setIsFinished(false)} 
+      <Leaderboard
+        songs={songs}
+        onContinue={openInResultsView && onBackFromResults ? onBackFromResults : () => setIsFinished(false)}
+        isPreview={false}
+        backButtonLabel={openInResultsView ? "Back to My Rankings" : undefined}
       />
     );
   }

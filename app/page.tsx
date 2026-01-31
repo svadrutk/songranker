@@ -32,10 +32,11 @@ export default function Home(): JSX.Element {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  
-  // Auto-collapse sidebar when ranking, analytics, or my rankings view starts
+  const [openInResultsView, setOpenInResultsView] = useState(false);
+
+  // Auto-collapse sidebar when ranking or analytics view starts (My Rankings keeps navigator open)
   useEffect(() => {
-    if (view === "ranking" || view === "analytics" || view === "my_rankings") {
+    if (view === "ranking" || view === "analytics") {
       setIsSidebarCollapsed(true);
     }
   }, [view]);
@@ -43,8 +44,8 @@ export default function Home(): JSX.Element {
   // Handle sidebar visibility
   useEffect(() => {
     const handleResize = () => {
-      // When ranking, analytics, or my rankings is active, keep sidebar collapsed (don't reopen on resize)
-      if (view === "ranking" || view === "analytics" || view === "my_rankings") return;
+      // When ranking or analytics is active, keep sidebar collapsed (don't reopen on resize)
+      if (view === "ranking" || view === "analytics") return;
 
       const isMobile = window.innerWidth < 768;
       
@@ -137,13 +138,28 @@ export default function Home(): JSX.Element {
   );
 
   const handleSessionSelect = useCallback((id: string) => {
-    // Clear search state when switching to an existing session
     setSelectedReleases([]);
     setAllTracks({});
     setError(null);
-    
     setSessionId(id);
     setView("ranking");
+    setOpenInResultsView(false);
+  }, []);
+
+  /** Open a completed session directly in the results (Leaderboard) view; used from My Rankings settled cards. */
+  const handleViewResults = useCallback((id: string) => {
+    setSelectedReleases([]);
+    setAllTracks({});
+    setError(null);
+    setSessionId(id);
+    setView("ranking");
+    setOpenInResultsView(true);
+  }, []);
+
+  const handleBackFromResults = useCallback(() => {
+    setView("my_rankings");
+    setSessionId(null);
+    setOpenInResultsView(false);
   }, []);
 
   const handleSessionDelete = useCallback((id: string) => {
@@ -222,6 +238,7 @@ export default function Home(): JSX.Element {
             onSearchStart={handleSearchStart}
             onStartRanking={handleStartRanking}
             onSessionSelect={handleSessionSelect}
+            onViewResults={handleViewResults}
             onSessionDelete={handleSessionDelete}
             onAnalyticsOpen={() => setView("analytics")}
             onRankingsOpen={() => setView("my_rankings")}
@@ -269,11 +286,17 @@ export default function Home(): JSX.Element {
           >
             <MyRankingsOverview
               isSidebarCollapsed={isSidebarCollapsed}
-              onSelectSession={(id) => { setSessionId(id); setView("ranking"); }}
+              onSelectSession={handleSessionSelect}
+              onViewResults={handleViewResults}
             />
           </div>
         ) : (
-          <RankingWidget isRanking={view === "ranking"} sessionId={sessionId} />
+          <RankingWidget
+            isRanking={view === "ranking"}
+            sessionId={sessionId}
+            openInResultsView={openInResultsView}
+            onBackFromResults={handleBackFromResults}
+          />
         )}
       </main>
 

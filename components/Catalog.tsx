@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useMemo, useEffect, type JSX } from "react";
-import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X, Lock, History, BarChart2 } from "lucide-react";
+import { Search, Loader2, CheckCircle2, ChevronDown, ChevronUp, Layers, X, Lock, History, ListMusic, BarChart2, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CoverArt } from "@/components/CoverArt";
-import { searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup } from "@/lib/api";
+import { searchArtistReleaseGroups, getReleaseGroupTracks, getUserSessions, type ReleaseGroup, type SessionSummary } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
+import Image from "next/image";
 import { SessionSelector } from "@/components/SessionSelector";
 import { cn } from "@/lib/utils";
+
+const COMPLETED_THRESHOLD = 90;
 
 type ReleaseType = "Album" | "EP" | "Single" | "Other";
 type CatalogView = "search" | "rankings" | "analytics";
@@ -36,6 +39,8 @@ type CatalogProps = Readonly<{
   onSearchStart?: () => void;
   onStartRanking?: () => void;
   onSessionSelect?: (sessionId: string) => void;
+  /** When provided, completed rankings in the My Rankings tab open directly in results (leaderboard) view. */
+  onViewResults?: (sessionId: string) => void;
   onSessionDelete?: (sessionId: string) => void;
   onAnalyticsOpen?: () => void;
   onRankingsOpen?: () => void;
@@ -75,7 +80,7 @@ function ViewToggle({ view, setView, onAnalyticsOpen, onRankingsOpen }: ViewTogg
           view === "rankings" ? "bg-background shadow-xs text-primary" : "text-muted-foreground hover:text-foreground"
         )}
       >
-        <History className="h-3 w-3" />
+        <ListMusic className="h-3 w-3" />
         <span className="hidden sm:inline">My Rankings</span>
         <span className="sm:hidden">Rankings</span>
       </button>
@@ -102,6 +107,7 @@ export function Catalog({
   onSearchStart, 
   onStartRanking, 
   onSessionSelect,
+  onViewResults,
   onSessionDelete,
   onAnalyticsOpen,
   onRankingsOpen,
@@ -119,6 +125,31 @@ export function Catalog({
     if (activePanel === "analytics") setView("analytics");
     else if (activePanel === "rankings") setView("rankings");
   }, [activePanel]);
+
+  // Ranking Results: completed sessions (settled zone) for the My Rankings tab — keep loaded while tab is "rankings" so reopening navigator still shows completed list
+  const [rankingResults, setRankingResults] = useState<SessionSummary[]>([]);
+  const [loadingRankingResults, setLoadingRankingResults] = useState(false);
+  const [rankingResultsImageErrors, setRankingResultsImageErrors] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (view !== "rankings" || !user) {
+      setRankingResults([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingRankingResults(true);
+    getUserSessions(user.id)
+      .then((data) => {
+        if (cancelled || !Array.isArray(data)) return;
+        const completed = data
+          .filter((s) => (s.convergence_score ?? 0) >= COMPLETED_THRESHOLD)
+          .sort((a, b) => (b.convergence_score ?? 0) - (a.convergence_score ?? 0));
+        setRankingResults(completed);
+      })
+      .catch(() => setRankingResults([]))
+      .finally(() => { if (!cancelled) setLoadingRankingResults(false); });
+    return () => { cancelled = true; };
+  }, [view, user]);
 
   // Catalog Search State
   const [query, setQuery] = useState("");
@@ -382,12 +413,75 @@ export function Catalog({
               Global &amp; user stats
             </p>
           </div>
-        ) : showRankingsPanel ? (
-          <div className="flex flex-col items-center justify-center h-full opacity-80 py-20 animate-in fade-in duration-300">
-            <History className="h-10 w-10 mb-4 text-primary" />
-            <p className="text-xs font-mono text-center px-4 text-muted-foreground">
-              Your rankings open on the right →
-            </p>
+        ) : view === "rankings" ? (
+          <div className="flex flex-col gap-2 pr-2 overflow-y-auto custom-scrollbar animate-in fade-in duration-300">
+            <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-1 mb-2 shrink-0">
+              Ranking Results
+            </h2>
+            {loadingRankingResults ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="text-xs font-mono uppercase tracking-widest">Loading…</p>
+              </div>
+            ) : rankingResults.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-center px-4">
+                <History className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-xs font-mono text-muted-foreground">No completed rankings yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {rankingResults.map((session) => (
+                  <button
+                    key={session.session_id}
+                    type="button"
+                    onClick={() => (onViewResults ?? onSessionSelect)?.(session.session_id)}
+                    className={cn(
+                      "w-full group flex items-center gap-3 pt-3 px-3 pb-4 rounded-md border transition-all text-left",
+                      activeSessionId === session.session_id
+                        ? "border-primary/40 bg-primary/5 shadow-xs"
+                        : "bg-card border-transparent hover:bg-muted/50 hover:border-border"
+                    )}
+                  >
+                    <div className="relative w-10 h-10 shrink-0 rounded overflow-hidden bg-muted/20">
+                      {(session.top_album_covers ?? []).length > 0 && !rankingResultsImageErrors[session.session_id] ? (
+                        <Image
+                          src={(session.top_album_covers ?? [])[0]}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                          onError={() => setRankingResultsImageErrors((prev) => ({ ...prev, [session.session_id]: true }))}
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Layers className="h-5 w-5 text-muted-foreground/40" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className={cn(
+                        "font-mono text-xs font-bold truncate block",
+                        activeSessionId === session.session_id ? "text-primary" : ""
+                      )}>
+                        {session.primary_artist}
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5 text-[9px] text-muted-foreground font-mono uppercase tracking-tighter">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 opacity-50" />
+                          {new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(session.created_at))}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3 opacity-50" />
+                          {session.convergence_score ?? 0}%
+                        </span>
+                      </div>
+                    </div>
+                    <BarChart2 className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
