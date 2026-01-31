@@ -112,14 +112,9 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
     return "green";
   }
 
-  function SessionCard({
-    session,
-    openResultsOnClick,
-  }: {
-    session: SessionSummary;
-    openResultsOnClick?: boolean;
-  }) {
+  function SessionCard({ session }: { session: SessionSummary }) {
     const score = session.convergence_score ?? 0;
+    const isSettled = score >= COMPLETED_THRESHOLD;
     const scheme = completionColor(score);
     const barBg =
       scheme === "red"
@@ -178,7 +173,7 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
               <Swords className="h-3 w-3 opacity-50" />
               {session.comparison_count} duels
             </span>
-            {openResultsOnClick && session.song_count != null && (
+            {session.song_count != null && (
               <span className="flex items-center gap-1">
                 <Music className="h-3 w-3 opacity-50" />
                 {session.song_count} songs
@@ -189,13 +184,8 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSelectSession
               {score}% complete
             </span>
           </div>
-          {openResultsOnClick && (
-            <p className="text-[9px] font-mono text-primary/80 uppercase tracking-wider mt-1.5">
-              View results →
-            </p>
-          )}
         </div>
-        {openResultsOnClick ? (
+        {isSettled ? (
           <Trophy className="h-5 w-5 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
         ) : (
           <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
