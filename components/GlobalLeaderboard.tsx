@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { type JSX, memo, useMemo } from "react";
 import { Loader2, RefreshCcw, Globe, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,16 @@ import { cn } from "@/lib/utils";
 import type { LeaderboardResponse } from "@/lib/api";
 import { motion, type Variants } from "framer-motion";
 
-import { TopAlbumsWaffleChart } from "@/components/charts/TopAlbumsWaffleChart";
+// Dynamic import for D3 chart - removes ~300KB from initial bundle
+const TopAlbumsWaffleChart = dynamic(
+  () => import("@/components/charts/TopAlbumsWaffleChart").then((m) => m.TopAlbumsWaffleChart),
+  { 
+    ssr: false, 
+    loading: () => (
+      <div className="w-full h-[180px] animate-pulse rounded-lg bg-muted/30" aria-hidden />
+    )
+  }
+);
 
 type GlobalLeaderboardProps = Readonly<{
   artist: string;
@@ -76,7 +86,7 @@ const SongRow = memo(({
       custom={index}
       variants={itemVariants}
       className={cn(
-        "flex items-center gap-4 md:gap-6 py-3 md:py-4 px-2 border-b-2 last:border-b-0 transition-colors",
+        "flex items-center gap-4 md:gap-6 py-3 md:py-4 border-b-2 last:border-b-0 transition-colors",
         "md:hover:bg-accent",
         getBorderColor()
       )}
@@ -197,13 +207,14 @@ export function GlobalLeaderboard({
 
   return (
     <motion.div 
+      key={artist} // Force remount when artist changes to reset animation state
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="flex flex-col w-full"
+      className="flex flex-col w-full p-4 md:p-6"
     >
       {/* Header with artist name and stats */}
-      <motion.div custom={0} variants={itemVariants} className="shrink-0 mb-4 md:mb-8 space-y-2 md:space-y-3 px-2">
+      <motion.div custom={0} variants={itemVariants} className="shrink-0 mb-4 md:mb-8 space-y-2 md:space-y-3">
         <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">
           Global Rankings
         </p>

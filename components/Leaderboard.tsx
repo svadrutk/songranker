@@ -101,11 +101,11 @@ export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel }: L
       animate="visible"
       variants={containerVariants}
       className={cn(
-        "flex flex-col h-full w-full max-w-3xl mx-auto py-4 md:py-8 overflow-hidden",
-        isPreview && "px-4"
+        "flex flex-col h-full w-full mx-auto py-4 md:py-8 overflow-hidden",
+        isPreview ? "max-w-lg px-3" : "max-w-3xl"
       )}
     >
-      <motion.div custom={0} variants={itemVariants} className="shrink-0 mb-4 md:mb-8">
+      <motion.div custom={0} variants={itemVariants} className="shrink-0 mb-4 md:mb-8 px-4 md:px-0">
         <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">
           {isPreview ? "Current Standings" : "Rankings"}
         </p>
@@ -128,7 +128,7 @@ export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel }: L
               key={song.song_id}
               custom={index}
               variants={itemVariants}
-              className="flex items-center gap-3 md:gap-6 py-3 md:py-4 px-1 md:px-2 border-b border-border last:border-b-0 hover:bg-accent transition-colors"
+              className="flex items-center gap-3 md:gap-6 py-3 md:py-4 px-4 md:px-2 border-b border-border last:border-b-0 hover:bg-accent transition-colors"
             >
               <div className={cn("w-10 md:w-16 shrink-0 text-2xl md:text-4xl font-black font-mono text-right", getRankColor())}>
                 {index + 1}
@@ -152,12 +152,12 @@ export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel }: L
         })}
       </div>
 
-      <motion.div custom={0} variants={itemVariants} className="shrink-0 space-y-6">
-        <div className="flex gap-2 flex-wrap">
+      <motion.div custom={0} variants={itemVariants} className="shrink-0 space-y-6 px-4 md:px-0">
+        <div className="flex flex-col md:flex-row gap-2">
           <Button
             onClick={onContinue}
             variant={isPreview ? "default" : "outline"}
-            className="flex-1 min-w-0 h-12 font-mono uppercase tracking-wider text-xs md:text-sm font-bold shrink"
+            className="w-full md:flex-1 h-12 font-mono uppercase tracking-wider text-xs md:text-sm font-bold"
           >
             {backButtonLabel ? (
               <>
@@ -177,19 +177,19 @@ export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel }: L
             )}
           </Button>
           {!isPreview && (
-            <div className="flex flex-1 min-w-0 shrink">
+            <>
               <ShareButton songs={sortedSongs} />
-            </div>
+              <Button
+                onClick={() => exportRankingsToCsv(sortedSongs)}
+                variant="outline"
+                className="w-full md:flex-1 h-12 font-mono uppercase tracking-wider text-xs md:text-sm font-bold"
+                title="Download rankings as CSV"
+              >
+                <FileDown className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 shrink-0" />
+                <span className="truncate">Export CSV</span>
+              </Button>
+            </>
           )}
-          <Button
-            onClick={() => exportRankingsToCsv(sortedSongs)}
-            variant="outline"
-            className="flex-1 min-w-0 h-12 font-mono uppercase tracking-wider text-xs md:text-sm font-bold shrink"
-            title="Download rankings as CSV"
-          >
-            <FileDown className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 shrink-0" />
-            <span className="truncate">Export CSV</span>
-          </Button>
         </div>
         <p className="text-xs font-mono text-muted-foreground uppercase text-center">
           {isPreview 

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState, useCallback, type JSX } from "react";
+import { useEffect, useCallback, type JSX } from "react";
 import {
   BarChart3,
   Globe,
@@ -11,9 +11,10 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import { getUserSessions, getArtistsWithLeaderboards, type SessionSummary, type ArtistWithLeaderboard } from "@/lib/api";
+import { getUserSessions, getArtistsWithLeaderboards } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
+import { useAnalyticsStore } from "@/lib/store";
 
 const ComparisonsPerArtistChart = dynamic(
   () => import("@/components/charts/ComparisonsPerArtistChart").then((m) => m.ComparisonsPerArtistChart),
@@ -51,10 +52,18 @@ function StatCard({
 
 export function DashboardOverview({ onSelectArtist }: DashboardOverviewProps): JSX.Element {
   const { user } = useAuth();
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [artistsWithLeaderboards, setArtistsWithLeaderboards] = useState<ArtistWithLeaderboard[]>([]);
-  const [loadingSessions, setLoadingSessions] = useState(!!user);
-  const [loadingArtists, setLoadingArtists] = useState(true);
+  
+  // Use Zustand store for data (shared with AnalyticsPage)
+  const {
+    sessions,
+    loadingSessions,
+    artistsWithLeaderboards,
+    loadingArtists,
+    setSessions,
+    setLoadingSessions,
+    setArtistsWithLeaderboards,
+    setLoadingArtists,
+  } = useAnalyticsStore();
 
   const loadSessions = useCallback(async () => {
     if (!user) {
@@ -72,7 +81,7 @@ export function DashboardOverview({ onSelectArtist }: DashboardOverviewProps): J
     } finally {
       setLoadingSessions(false);
     }
-  }, [user]);
+  }, [user, setSessions, setLoadingSessions]);
 
   const loadArtists = useCallback(async () => {
     setLoadingArtists(true);
@@ -85,15 +94,21 @@ export function DashboardOverview({ onSelectArtist }: DashboardOverviewProps): J
     } finally {
       setLoadingArtists(false);
     }
-  }, []);
+  }, [setArtistsWithLeaderboards, setLoadingArtists]);
 
   useEffect(() => {
-    loadSessions();
-  }, [loadSessions]);
+    // Only load if sessions are empty (avoid refetching if already loaded)
+    if (sessions.length === 0 && user) {
+      loadSessions();
+    }
+  }, [loadSessions, sessions.length, user]);
 
   useEffect(() => {
-    loadArtists();
-  }, [loadArtists]);
+    // Only load if artists are empty (avoid refetching if already loaded)
+    if (artistsWithLeaderboards.length === 0) {
+      loadArtists();
+    }
+  }, [loadArtists, artistsWithLeaderboards.length]);
 
   const totalComparisons = sessions.reduce((sum, s) => sum + (s.comparison_count ?? 0), 0);
   const artistsRanked = [...new Set(sessions.map((s) => s.primary_artist).filter(Boolean))];
