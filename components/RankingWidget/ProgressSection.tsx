@@ -17,6 +17,7 @@ type ProgressSectionProps = Readonly<{
 type Phase = {
   id: number;
   name: string;
+  completedName: string;
   description: string;
   // Phase thresholds as percentage of recommended duels (0-100)
   startPercent: number;
@@ -28,6 +29,7 @@ const PHASES: Phase[] = [
   { 
     id: 1, 
     name: "Calibrate", 
+    completedName: "Calibrated",
     description: "Initial comparisons",
     startPercent: 0,
     endPercent: 33,
@@ -36,6 +38,7 @@ const PHASES: Phase[] = [
   { 
     id: 2, 
     name: "Establish", 
+    completedName: "Established",
     description: "Building order",
     startPercent: 33,
     endPercent: 66,
@@ -44,6 +47,7 @@ const PHASES: Phase[] = [
   { 
     id: 3, 
     name: "Stabilize", 
+    completedName: "Stabilized",
     description: "Locking top 10",
     startPercent: 66,
     endPercent: 100,
@@ -139,7 +143,7 @@ export function ProgressSection({
             <div key={phase.id} className="flex-1 flex flex-col gap-1.5 md:gap-2">
               {/* Phase header */}
               <div className={cn(
-                "flex items-center gap-1.5 md:gap-2 transition-colors duration-300",
+                "flex items-center justify-center gap-1.5 md:gap-2 transition-colors duration-300",
                 isCompleted && "text-green-500",
                 isActive && "text-primary",
                 isPending && "text-muted-foreground/30"
@@ -163,7 +167,7 @@ export function ProgressSection({
                     isActive && "text-primary",
                     isPending && "text-muted-foreground/40"
                   )}>
-                    {phase.name}
+                    {isCompleted ? phase.completedName : phase.name}
                   </span>
                 </div>
               </div>
@@ -204,7 +208,7 @@ export function ProgressSection({
             {isComplete ? (
               <Button 
                 onClick={onViewResults}
-                className="h-12 md:h-14 w-full rounded-xl bg-muted/10 hover:bg-primary/5 text-green-500 border border-green-500 font-mono hover:cursor-pointer uppercase tracking-[0.15em] md:tracking-[0.25em] text-[10px] md:text-xs font-black transition-all group active:scale-95"
+                className="h-12 md:h-14 w-full md:w-[60%] rounded-xl bg-muted/10 hover:bg-primary/5 text-green-500 border border-green-500 font-mono hover:cursor-pointer uppercase tracking-[0.15em] md:tracking-[0.25em] text-[10px] md:text-xs font-black transition-all group active:scale-95"
               >
                 View Results
               </Button>
@@ -216,7 +220,7 @@ export function ProgressSection({
                 <Button 
                   onClick={onPeekRankings}
                   variant="outline"
-                  className="h-11 md:h-14 w-full border-amber-500/30 hover:border-amber-500/50 text-muted-foreground hover:text-amber-500 font-mono uppercase tracking-widest text-[9px] md:text-[10px] font-black py-2 md:py-3 px-3 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
+                  className="h-11 md:h-14 w-full md:w-[60%] border-amber-500/30 hover:border-amber-500/50 text-muted-foreground hover:text-amber-500 font-mono uppercase tracking-widest text-[9px] md:text-[10px] font-black py-2 md:py-3 px-3 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
                 >
                   <Eye className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1.5 md:mr-2 group-hover:scale-110 transition-transform" />
                   Peek Rankings (Not Final)
@@ -226,7 +230,7 @@ export function ProgressSection({
               <Button 
                 onClick={onPeekRankings}
                 variant="outline"
-                className="h-11 md:h-14 w-full border-primary/20 hover:border-primary/40 text-muted-foreground hover:text-primary font-mono uppercase tracking-widest text-[9px] md:text-[10px] font-black py-2 md:py-3 px-3 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
+                className="h-11 md:h-14 w-full md:w-[60%] border-primary/20 hover:border-primary/40 text-muted-foreground hover:text-primary font-mono uppercase tracking-widest text-[9px] md:text-[10px] font-black py-2 md:py-3 px-3 md:px-6 rounded-xl group bg-background/50 backdrop-blur-sm"
               >
                 <Eye className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1.5 md:mr-2 group-hover:scale-110 transition-transform" />
                 Peek Rankings

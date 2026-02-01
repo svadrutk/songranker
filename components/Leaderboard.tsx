@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import type { JSX } from "react";
 import { RotateCcw, Check, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { cn } from "@/lib/utils";
 import type { SessionSong } from "@/lib/api";
 import { motion, type Variants } from "framer-motion";
+import { StarRatingNotification, hasGivenFeedback } from "@/components/RankingWidget/StarRatingNotification";
 
 function escapeCsvCell(value: string): string {
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
@@ -56,6 +58,8 @@ export type LeaderboardProps = {
   isPreview?: boolean;
   /** Override back button label when isPreview (e.g. "Back to My Rankings"). */
   backButtonLabel?: string;
+  /** Session ID for star rating feedback. */
+  sessionId?: string | null;
 };
 
 const containerVariants: Variants = {
@@ -88,24 +92,54 @@ const itemVariants: Variants = {
   }),
 };
 
-export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel }: LeaderboardProps): JSX.Element {
+export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel, sessionId }: LeaderboardProps): JSX.Element {
   const sortedSongs = [...songs].sort((a, b) => {
     const scoreA = a.bt_strength ?? (a.local_elo / 3000); 
     const scoreB = b.bt_strength ?? (b.local_elo / 3000);
     return scoreB - scoreA;
   });
 
+  // Star rating notification state - only show on first view of leaderboard (not preview)
+  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+  const hasCheckedFeedbackRef = useRef(false);
+
+  useEffect(() => {
+    // DEV: Always show rating prompt for testing
+    const isDev = process.env.NODE_ENV === "development";
+    
+    // Only show rating prompt for non-preview leaderboards with a session ID
+    if (isPreview || !sessionId) return;
+    if (!isDev && hasCheckedFeedbackRef.current) return;
+    
+    hasCheckedFeedbackRef.current = true;
+    
+    // Check if user has already given feedback for this session (skip in dev)
+    if (isDev || !hasGivenFeedback(sessionId)) {
+      // Small delay to let the leaderboard animate in first
+      const timer = setTimeout(() => {
+        setShowRatingPrompt(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionId, isPreview]);
+
   return (
-    <motion.div 
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className={cn(
-        "flex flex-col h-full w-full mx-auto py-4 md:py-8 overflow-hidden",
-        isPreview ? "max-w-lg px-3" : "max-w-3xl"
-      )}
-    >
-      <motion.div custom={0} variants={itemVariants} className="shrink-0 mb-4 md:mb-8 px-4 md:px-0">
+    <>
+      <StarRatingNotification
+        sessionId={sessionId ?? null}
+        isVisible={showRatingPrompt}
+        onDismiss={() => setShowRatingPrompt(false)}
+      />
+      <motion.div 
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        className={cn(
+          "flex flex-col h-full w-full mx-auto py-4 md:py-8 overflow-hidden",
+          isPreview ? "max-w-lg px-3" : "max-w-3xl"
+        )}
+      >
+        <motion.div custom={0} variants={itemVariants} className="shrink-0 mb-4 md:mb-8 px-4 md:px-0">
         <p className="text-[10px] md:text-xs font-mono text-muted-foreground uppercase tracking-wider mb-1 md:mb-2">
           {isPreview ? "Current Standings" : "Rankings"}
         </p>
@@ -197,6 +231,7 @@ export function Leaderboard({ songs, onContinue, isPreview, backButtonLabel }: L
             : "More duels = more accurate rankings"}
         </p>
       </motion.div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }

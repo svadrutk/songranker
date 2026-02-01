@@ -272,7 +272,7 @@
           "sessions"
         ],
         "summary": "Get Session Detail",
-        "description": "Retrieve session metadata, songs, and comparison count.",
+        "description": "Retrieve session metadata, songs, comparison count, and comparison history.",
         "operationId": "get_session_detail_sessions__session_id__get",
         "parameters": [
           {
@@ -930,6 +930,44 @@
         ],
         "title": "ComparisonCreate"
       },
+      "ComparisonPair": {
+        "properties": {
+          "song_a_id": {
+            "type": "string",
+            "format": "uuid4",
+            "title": "Song A Id"
+          },
+          "song_b_id": {
+            "type": "string",
+            "format": "uuid4",
+            "title": "Song B Id"
+          },
+          "winner_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid4"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Winner Id"
+          },
+          "is_tie": {
+            "type": "boolean",
+            "title": "Is Tie",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "song_a_id",
+          "song_b_id"
+        ],
+        "title": "ComparisonPair",
+        "description": "Model for tracking comparisons with outcome info for IDC filtering."
+      },
       "ComparisonResponse": {
         "properties": {
           "success": {
@@ -1080,6 +1118,32 @@
               }
             ],
             "title": "Url"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid4"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "star_rating": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Star Rating",
+            "description": "Star rating from 1 to 5"
           }
         },
         "type": "object",
@@ -1366,6 +1430,13 @@
               }
             ],
             "title": "Convergence Score"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/ComparisonPair"
+            },
+            "type": "array",
+            "title": "Comparisons"
           }
         },
         "type": "object",

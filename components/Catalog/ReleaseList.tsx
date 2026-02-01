@@ -53,7 +53,6 @@ export function ReleaseList({
         <ReleaseFilters
           activeFilters={activeFilters}
           onToggleFilter={onToggleFilter}
-          resultCount={filteredResults.length}
         />
         {filteredResults.map((release, index) => (
           <ReleaseItem

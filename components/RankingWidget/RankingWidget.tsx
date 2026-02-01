@@ -457,6 +457,7 @@ export function RankingWidget({
         onContinue={openInResultsView && onBackFromResults ? onBackFromResults : () => setIsFinished(false)}
         isPreview={false}
         backButtonLabel={openInResultsView ? "Back to My Rankings" : undefined}
+        sessionId={sessionId}
       />
     );
   }

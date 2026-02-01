@@ -143,10 +143,12 @@ export default function Home(): JSX.Element {
   }, [navigateToResults]);
 
   const handleSessionDelete = useCallback((id: string) => {
-    if (sessionId === id) {
+    // Only navigate to catalog if we're currently viewing this session in the ranking view
+    // Don't navigate away if we're on my_rankings or other views
+    if (view === "ranking" && sessionId === id) {
       navigateToCatalog();
     }
-  }, [sessionId, navigateToCatalog]);
+  }, [view, sessionId, navigateToCatalog]);
 
   return (
     <div key={user?.id || "guest"} className="flex h-full w-full overflow-hidden bg-background relative">

@@ -20,7 +20,7 @@ export function StartRankingButton({
       <Button 
         onClick={onClick}
         disabled={isLoading}
-        className="w-full bg-green-500 hover:bg-green-600 text-black font-mono py-4 md:py-6 rounded-xl shadow-lg shadow-green-900/20 text-base md:text-lg group flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait"
+        className="w-full bg-sage hover:bg-sage-dark dark:bg-primary dark:hover:bg-primary/80 text-sage-text dark:text-primary-foreground font-mono py-4 md:py-6 rounded-xl shadow-lg shadow-sage-muted/30 dark:shadow-black/30 text-base md:text-lg group flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-wait transition-colors"
       >
         {isLoading ? (
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -29,7 +29,7 @@ export function StartRankingButton({
         )}
         {isLoading ? "FETCHING TRACKS..." : "READY TO RANK?"}
         {!isLoading && (
-          <span className="ml-1 px-2 py-0.5 bg-black/10 rounded-md text-xs">{selectedCount}</span>
+          <span className="ml-1 px-2 py-0.5 bg-sage-text/10 dark:bg-white/15 rounded-md text-xs">{selectedCount}</span>
         )}
       </Button>
     </div>

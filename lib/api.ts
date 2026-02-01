@@ -355,4 +355,24 @@ export async function getGlobalActivityStats(): Promise<GlobalActivityStats | nu
   }
 }
 
+export type FeedbackCreate = {
+  message: string;
+  user_id?: string | null;
+  user_agent?: string | null;
+  url?: string | null;
+  session_id?: string | null;
+  star_rating?: number | null;
+};
 
+export type FeedbackResponse = {
+  id: string;
+  message: string;
+  created_at: string;
+};
+
+export async function submitFeedback(payload: FeedbackCreate): Promise<FeedbackResponse> {
+  return fetchBackend<FeedbackResponse>("/feedback", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

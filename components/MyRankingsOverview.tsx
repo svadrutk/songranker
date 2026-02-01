@@ -136,6 +136,13 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSessionDelete
     });
   };
 
+  // 3-phase progress bar thresholds (matching ProgressSection)
+  const PHASE_THRESHOLDS = [
+    { startPercent: 0, endPercent: 33 },
+    { startPercent: 33, endPercent: 66 },
+    { startPercent: 66, endPercent: 100 },
+  ];
+
   function SessionCard({
     session,
     openResultsOnClick,
@@ -148,19 +155,26 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSessionDelete
     isDeleting?: boolean;
   }) {
     const score = session.convergence_score ?? 0;
+    // Map convergence score (0-90 is typical range) to display percentage (0-100)
+    const displayProgress = Math.min(100, (score / 90) * 100);
+    
     const scheme = completionColor(score);
-    const barBg =
-      scheme === "red"
-        ? "bg-red-500/60"
-        : scheme === "yellow"
-          ? "bg-yellow-500/60"
-          : "bg-green-500/60";
     const textColor =
       scheme === "red"
         ? "text-red-500"
         : scheme === "yellow"
           ? "text-yellow-600 dark:text-yellow-500"
           : "text-green-600 dark:text-green-500";
+    
+    // Determine current phase (1, 2, 3, or 4 for complete)
+    const getCurrentPhase = (): number => {
+      if (score >= 90) return 4; // Complete
+      if (displayProgress >= 66) return 3;
+      if (displayProgress >= 33) return 2;
+      return 1;
+    };
+    const currentPhase = getCurrentPhase();
+    const isComplete = score >= 90;
 
     const handleClick = () => {
       // Always navigate to ranking widget, even for completed sessions
@@ -256,12 +270,46 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSessionDelete
             <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           )}
         </div>
-        {/* Progress bar (matches navigator green / yellow / red) */}
-        <div className="absolute bottom-2 left-4 right-4 h-[2px] bg-primary/10 rounded-full overflow-hidden">
-          <div
-            className={cn("h-full rounded-full transition-all duration-300", barBg)}
-            style={{ width: `${Math.min(100, score)}%` }}
-          />
+        {/* 3-phase progress bar */}
+        <div className="absolute bottom-2 left-4 right-4 flex items-center gap-1">
+          {PHASE_THRESHOLDS.map((phase, idx) => {
+            const phaseNum = idx + 1;
+            const isPhaseCompleted = currentPhase > phaseNum || isComplete;
+            const isPhaseActive = currentPhase === phaseNum && !isComplete;
+            const isPhasePending = currentPhase < phaseNum && !isComplete;
+            
+            // Calculate progress within this phase
+            let phaseProgress = 0;
+            if (isPhaseCompleted) {
+              phaseProgress = 100;
+            } else if (isPhaseActive) {
+              const phaseRange = phase.endPercent - phase.startPercent;
+              const progressInPhase = displayProgress - phase.startPercent;
+              phaseProgress = Math.min(100, Math.max(0, (progressInPhase / phaseRange) * 100));
+            }
+            
+            return (
+              <div
+                key={phaseNum}
+                className={cn(
+                  "flex-1 h-[3px] rounded-full overflow-hidden transition-colors duration-300",
+                  isPhaseCompleted && "bg-green-500/30",
+                  isPhaseActive && "bg-primary/20",
+                  isPhasePending && "bg-muted/20"
+                )}
+              >
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300",
+                    isPhaseCompleted && "bg-green-500",
+                    isPhaseActive && "bg-primary",
+                    isPhasePending && "bg-muted-foreground/20"
+                  )}
+                  style={{ width: `${phaseProgress}%` }}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     );
