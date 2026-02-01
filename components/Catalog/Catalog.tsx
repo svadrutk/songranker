@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, type JSX } from "react";
+import { useMemo, useEffect, useRef, type JSX } from "react";
 import { searchArtistReleaseGroups, getReleaseGroupTracks, suggestArtists, type ReleaseGroup } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { SessionSelector } from "@/components/SessionSelector";
@@ -106,12 +106,23 @@ export function Catalog({
 
   const debouncedQuery = useDebouncedValue(query, 300);
 
+  // Track the last searched query to avoid showing suggestions for it
+  const lastSearchedQueryRef = useRef<string>("");
+
   // Fetch suggestions when debounced query changes
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
+      setLoadingSuggestions(false);
+      return;
+    }
+
+    // Don't show suggestions if query matches what was just searched
+    if (trimmed.toLowerCase() === lastSearchedQueryRef.current.toLowerCase()) {
+      setShowSuggestions(false);
+      setLoadingSuggestions(false);
       return;
     }
 
@@ -143,6 +154,8 @@ export function Catalog({
   const handleSuggestionClick = (suggestion: string) => {
     setQuery(suggestion);
     setShowSuggestions(false);
+    setSuggestions([]);
+    lastSearchedQueryRef.current = suggestion; // Track what was searched
     
     if (!user) {
       openAuthModal("login");

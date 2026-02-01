@@ -48,6 +48,8 @@ export type SessionSummary = {
 export type ComparisonPair = {
   song_a_id: string;
   song_b_id: string;
+  winner_id: string | null;
+  is_tie: boolean;
 };
 
 export type SessionDetail = {

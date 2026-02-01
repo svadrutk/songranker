@@ -6,12 +6,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, undoLastComparison, type SessionSong, type SessionDetail } from "@/lib/api";
 import { 
-  getNextPairV2, 
+  getNextPair, 
   createComparisonHistory, 
   recordComparison,
   buildHistoryFromComparisons,
   type ComparisonHistory 
-} from "@/lib/pairing-v2";
+} from "@/lib/pairing";
 import { calculateNewRatings, calculateKFactor } from "@/lib/elo";
 import { Music, LogIn, Loader2, Scale, Meh, Undo2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
@@ -73,16 +73,7 @@ export function RankingWidget({
   const [showPeek, setShowPeek] = useState(false);
 
   // Use extracted hooks
-  const { 
-    displayScore, 
-    showProgressHint, 
-    addPerceivedBoost, 
-    resetPerceivedBoost 
-  } = useConvergenceTracking({
-    songCount: songs.length,
-    totalDuels,
-    convergence,
-  });
+  const { displayScore } = useConvergenceTracking({ convergence });
 
   const { resetTimer, getDecisionTime, startPeekPause, endPeekPause } = useWindowFocusTimer();
   const { isVisible: showRankNotification, show: showRankUpdateNotification, hide: hideRankNotification } = useTimedNotification(4000);
@@ -119,7 +110,6 @@ export function RankingWidget({
     setCurrentPair(null);
     setTotalDuels(0);
     setConvergence(0);
-    resetPerceivedBoost();
     setIsFinished(false);
     setWinnerId(null);
     setIsTie(false);
@@ -141,10 +131,15 @@ export function RankingWidget({
             : createComparisonHistory();
           setComparisonHistory(history);
           
-          // Recalculate comparison_count from actual comparisons
+          // Recalculate comparison_count from MEANINGFUL comparisons only
+          // IDC responses (winner_id=null, is_tie=false) don't count for pairing priority
           const comparisonCounts: Record<string, number> = {};
           if (detailWithComparisons.comparisons) {
             for (const comp of detailWithComparisons.comparisons) {
+              // Skip IDC responses - they don't provide ranking information
+              const isMeaningful = comp.winner_id != null || comp.is_tie === true;
+              if (!isMeaningful) continue;
+              
               comparisonCounts[comp.song_a_id] = (comparisonCounts[comp.song_a_id] ?? 0) + 1;
               comparisonCounts[comp.song_b_id] = (comparisonCounts[comp.song_b_id] ?? 0) + 1;
             }
@@ -158,7 +153,7 @@ export function RankingWidget({
           setSongs(songsWithAccurateCounts);
           setTotalDuels(detail.comparison_count);
           setConvergence(detail.convergence_score ?? 0);
-          setCurrentPair(getNextPairV2(songsWithAccurateCounts, history));
+          setCurrentPair(getNextPair(songsWithAccurateCounts, history));
           resetTimer();
           if (openInResultsView) setIsFinished(true);
         }
@@ -175,7 +170,7 @@ export function RankingWidget({
     return () => {
       isCurrent = false;
     };
-  }, [isRanking, sessionId, openInResultsView, resetPerceivedBoost, resetTimer, hideRankNotification]);
+  }, [isRanking, sessionId, openInResultsView, resetTimer, hideRankNotification]);
 
   const handleChoice = useCallback(
     async (winner: SessionSong | null, tie: boolean = false) => {
@@ -208,13 +203,12 @@ export function RankingWidget({
       recordComparison(comparisonHistory, songA.song_id, songB.song_id);
 
       setSongs(updatedSongs);
-      setCurrentPair(getNextPairV2(updatedSongs, comparisonHistory));
+      setCurrentPair(getNextPair(updatedSongs, comparisonHistory));
       resetTimer();
 
       setWinnerId(null);
       setIsTie(false);
       setTotalDuels((prev) => prev + 1);
-      addPerceivedBoost();
 
       try {
         const response = await createComparison(sessionId, {
@@ -233,9 +227,8 @@ export function RankingWidget({
           const newScore = response.convergence_score ?? 0;
           if (isMounted.current) {
             setConvergence(prev => {
-              if (newScore > prev) {
-                resetPerceivedBoost();
-                if (newScore >= 90) showRankUpdateNotification();
+              if (newScore > prev && newScore >= 90) {
+                showRankUpdateNotification();
               }
               return Math.max(prev, newScore);
             });
@@ -270,9 +263,8 @@ export function RankingWidget({
                     const detailScore = detail.convergence_score ?? 0;
                     if (detailScore > previousConvergenceValue) {
                       setConvergence(prev => {
-                        if (detailScore > prev) {
-                          resetPerceivedBoost();
-                          if (detailScore >= 90) showRankUpdateNotification();
+                        if (detailScore > prev && detailScore >= 90) {
+                          showRankUpdateNotification();
                         }
                         return Math.max(prev, detailScore);
                       });
@@ -294,7 +286,7 @@ export function RankingWidget({
         console.error("Failed to sync comparison:", error);
       }
     },
-    [currentPair, sessionId, winnerId, songs, queryClient, comparisonHistory, getDecisionTime, resetTimer, addPerceivedBoost, resetPerceivedBoost, showRankUpdateNotification]
+    [currentPair, sessionId, winnerId, songs, queryClient, comparisonHistory, getDecisionTime, resetTimer, showRankUpdateNotification]
   );
 
   const handleUndo = useCallback(async (): Promise<void> => {
@@ -319,7 +311,6 @@ export function RankingWidget({
       });
       setSongs(updatedSongs);
       setTotalDuels((prev) => prev - 1);
-      resetPerceivedBoost();
       setWinnerId(null);
       setIsTie(false);
       resetTimer();
@@ -329,7 +320,7 @@ export function RankingWidget({
       if (songA && songB) {
         setCurrentPair([songA, songB]);
       } else {
-        setCurrentPair(getNextPairV2(updatedSongs, comparisonHistory));
+        setCurrentPair(getNextPair(updatedSongs, comparisonHistory));
       }
 
       setTimeout(() => {
@@ -350,7 +341,7 @@ export function RankingWidget({
     } finally {
       if (isMounted.current) setIsUndoing(false);
     }
-  }, [sessionId, totalDuels, isUndoing, songs, comparisonHistory, queryClient, resetPerceivedBoost, resetTimer]);
+  }, [sessionId, totalDuels, isUndoing, songs, comparisonHistory, queryClient, resetTimer]);
 
   const handleSkip = useCallback(async (): Promise<void> => {
     if (!currentPair || !sessionId) return;
@@ -363,24 +354,26 @@ export function RankingWidget({
     const [newEloA] = calculateNewRatings(songA.local_elo, songB.local_elo, 0);
     const [, newEloB] = calculateNewRatings(songA.local_elo, songB.local_elo, 1);
 
+    // IDC doesn't increment comparison_count - it's not a meaningful comparison
+    // for pairing priority purposes. The backend also excludes IDC from convergence.
     const updatedSongs = songs.map((s) => {
       if (s.song_id === songA.song_id) {
-        return { ...s, local_elo: newEloA, comparison_count: (s.comparison_count ?? 0) + 1 };
+        return { ...s, local_elo: newEloA };
       }
       if (s.song_id === songB.song_id) {
-        return { ...s, local_elo: newEloB, comparison_count: (s.comparison_count ?? 0) + 1 };
+        return { ...s, local_elo: newEloB };
       }
       return s;
     });
     
+    // Still record in history to avoid showing the same pair again
     recordComparison(comparisonHistory, songA.song_id, songB.song_id);
     
     setSongs(updatedSongs);
-    setCurrentPair(getNextPairV2(updatedSongs, comparisonHistory));
+    setCurrentPair(getNextPair(updatedSongs, comparisonHistory));
     resetTimer();
 
     setTotalDuels((prev) => prev + 1);
-    addPerceivedBoost();
     setIsSkipping(false);
 
     createComparison(sessionId, {
@@ -390,7 +383,7 @@ export function RankingWidget({
       is_tie: false,
       decision_time_ms: decisionTime,
     }).catch(err => console.error("Failed to record skip:", err));
-  }, [currentPair, sessionId, songs, comparisonHistory, getDecisionTime, resetTimer, addPerceivedBoost]);
+  }, [currentPair, sessionId, songs, comparisonHistory, getDecisionTime, resetTimer]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -458,12 +451,14 @@ export function RankingWidget({
   }
 
   if (isFinished) {
+    return (
       <Leaderboard
         songs={songs}
         onContinue={openInResultsView && onBackFromResults ? onBackFromResults : () => setIsFinished(false)}
         isPreview={false}
         backButtonLabel={openInResultsView ? "Back to My Rankings" : undefined}
       />
+    );
   }
 
   return (
@@ -483,8 +478,8 @@ export function RankingWidget({
 
         <ProgressSection
           displayScore={displayScore}
-          showProgressHint={showProgressHint}
           totalDuels={totalDuels}
+          songCount={songs.length}
           onViewResults={() => setIsFinished(true)}
           onPeekRankings={() => setShowPeek(true)}
         />

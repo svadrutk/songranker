@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, type JSX } from "react";
-import { Calendar, CheckCircle2, Layers, Loader2, Music, PlayCircle, Swords, Trophy, ArrowDownAZ, ArrowUpAZ, ArrowDown, ArrowUp, Clock, Trash2 } from "lucide-react";
+import { useState, useEffect, type JSX } from "react";
+import { Calendar, CheckCircle2, Layers, Loader2, Music, PlayCircle, Swords, Trophy, ArrowDownAZ, ArrowUpAZ, ArrowDown, ArrowUp, Clock, Trash2, AlertTriangle, X } from "lucide-react";
 import Image from "next/image";
 import type { SessionSummary } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
 import { cn } from "@/lib/utils";
 import { useNavigationStore, useAnalyticsStore } from "@/lib/store";
 import { useUserSessions, useDeleteSession } from "@/lib/hooks";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 
 const COMPLETION_THRESHOLD = 25;
 /** Same as RankingWidget "View Results" threshold (displayScore >= 90) so completed rankings appear in Completed column. */
@@ -39,6 +42,7 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSessionDelete
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const [sortField, setSortField] = useState<SortField>("completion");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (!user) {
     return (
@@ -120,7 +124,13 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSessionDelete
   }
 
   const handleDeleteSession = (sessionId: string) => {
-    if (!confirm("Delete this ranking? This cannot be undone.")) return;
+    setConfirmDeleteId(sessionId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!confirmDeleteId) return;
+    const sessionId = confirmDeleteId;
+    setConfirmDeleteId(null);
     deleteSessionMutation.mutate(sessionId, {
       onSuccess: () => onSessionDelete?.(sessionId),
     });
@@ -505,6 +515,101 @@ export function MyRankingsOverview({ isSidebarCollapsed = false, onSessionDelete
           </div>
         </div>
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={handleConfirmDelete}
+        artistName={sessions.find(s => s.session_id === confirmDeleteId)?.primary_artist || ""}
+      />
     </div>
+  );
+}
+
+type DeleteConfirmationModalProps = Readonly<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  artistName: string;
+}>;
+
+function DeleteConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  artistName 
+}: DeleteConfirmationModalProps): JSX.Element | null {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-background/60 backdrop-blur-md"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-sm bg-card border border-border/40 rounded-3xl p-6 shadow-2xl overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 bg-destructive/5 rounded-full blur-3xl" />
+            
+            <div className="relative">
+              <div className="flex justify-end mb-4">
+                <button 
+                  onClick={onClose}
+                  className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex justify-center mb-6">
+                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-8 text-center">
+                <h3 className="text-xl font-mono font-bold uppercase tracking-tight">Confirm Deletion</h3>
+                <p className="text-sm text-muted-foreground font-mono leading-relaxed">
+                  Permanently remove ranking for <span className="text-foreground font-bold">{artistName}</span>? This cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  className="flex-1 font-mono uppercase tracking-widest text-[10px] font-bold h-11 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={onConfirm}
+                  className="flex-1 bg-destructive hover:bg-destructive/90 text-white font-mono uppercase tracking-widest text-[10px] font-bold h-11 rounded-xl shadow-lg shadow-destructive/20"
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 }
