@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { submitFeedback } from "@/lib/api";
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -29,22 +30,11 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setError(null);
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-      const response = await fetch(`${backendUrl}/feedback`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: message.trim(),
-          user_agent: navigator.userAgent,
-          url: window.location.href,
-        }),
+      await submitFeedback({
+        message: message.trim(),
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        url: typeof window !== "undefined" ? window.location.href : null,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to submit feedback");
-      }
 
       setSuccess(true);
       setMessage("");
