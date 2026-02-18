@@ -31,7 +31,7 @@ export const ReceiptMarquee = () => {
                 initial={{ y: reverse ? "-50%" : "0%" }}
                 animate={shouldReduceMotion ? {} : { y: reverse ? "0%" : "-50%" }}
                 transition={{ duration, repeat: Infinity, ease: "linear" }}
-                className="flex flex-col gap-10 will-change-transform"
+                className="flex flex-col gap-10 will-change-transform grayscale invert brightness-110"
                 style={{ paddingBottom: "2.5rem" }}
               >
                 {[...images, ...images].map((src, i) => (
