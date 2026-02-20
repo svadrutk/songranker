@@ -127,8 +127,8 @@ export type RankingSource = ArtistAllSource | ArtistPartialSource | PlaylistSour
 - [x] Build the "Quick Start" dashboard empty state.
 
 ### Phase 3: Inline Selection & Multi-Source
-- [ ] Refactor `ReleaseList.tsx` into an "Inline Selection" mode.
-- [ ] Logic for merging individual release selections into an `ArtistPartialSource`.
+- [x] Refactor `ReleaseList.tsx` into an "Inline Selection" mode.
+- [x] Logic for merging individual release selections into an `ArtistPartialSource`.
 
 ### Phase 4: Review & Launch
 - [ ] Build the "Review & Clean" step as a dedicated view in the builder.

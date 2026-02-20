@@ -4,13 +4,14 @@ import { useState, useEffect, type JSX } from "react";
 import { useSessionBuilderStore, useNavigationStore } from "@/lib/store";
 import { UnifiedSearchBar } from "./UnifiedSearchBar";
 import { SourceCard } from "./SourceCard";
-import { suggestArtists } from "@/lib/api";
+import { InlineArtistSelector } from "./InlineArtistSelector";
+import { suggestArtists, searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
-import { Trash2, ArrowRight, Music, Link as LinkIcon, Clock } from "lucide-react";
+import { Trash2, ArrowRight, Music, Link as LinkIcon, Clock, Loader2 } from "lucide-react";
 
 export function SessionBuilder(): JSX.Element {
-  const { sources, addSource, removeSource, resetDraft, status, setStatus } = useSessionBuilderStore();
+  const { sources, addSource, removeSource, resetDraft, status, setStatus, updateSource } = useSessionBuilderStore();
   const { setView } = useNavigationStore();
   
   const [query, setQuery] = useState("");
@@ -18,11 +19,16 @@ export function SessionBuilder(): JSX.Element {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   
+  // Artist selection state
+  const [searchingArtist, setSearchingArtist] = useState<{name: string} | null>(null);
+  const [artistReleases, setArtistReleases] = useState<ReleaseGroup[]>([]);
+  const [loadingReleases, setLoadingReleases] = useState(false);
+  
   const debouncedQuery = useDebouncedValue(query, 300);
 
   useEffect(() => {
     const trimmed = debouncedQuery.trim();
-    if (trimmed.length < 2 || trimmed.startsWith("http")) {
+    if (trimmed.length < 2 || trimmed.startsWith("http") || searchingArtist) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -36,12 +42,70 @@ export function SessionBuilder(): JSX.Element {
         setLoadingSuggestions(false);
         setShowSuggestions(true);
       });
-  }, [debouncedQuery]);
+  }, [debouncedQuery, searchingArtist]);
 
-  const handleSuggestionClick = (suggestion: string) => {
-    setQuery(suggestion);
+  const handleSuggestionClick = async (suggestion: string) => {
+    setQuery("");
     setShowSuggestions(false);
-    // Artist discography selection will be implemented in Phase 3
+    setSearchingArtist({ name: suggestion });
+    setLoadingReleases(true);
+    setStatus('building');
+    
+    try {
+      const releases = await searchArtistReleaseGroups(suggestion);
+      setArtistReleases(releases);
+    } catch (error) {
+      console.error("Failed to fetch releases:", error);
+    } finally {
+      setLoadingReleases(false);
+    }
+  };
+
+  const handleAddArtistReleases = async (selectedReleases: ReleaseGroup[]) => {
+    if (!searchingArtist) return;
+    
+    const sourceId = `artist-${Date.now()}`;
+    const artistName = searchingArtist.name;
+    
+    // Add pending source
+    addSource({
+      id: sourceId,
+      type: 'artist_partial',
+      name: artistName,
+      artistName: artistName,
+      songCount: 0,
+      status: 'loading',
+      progress: 10,
+      data: { 
+        artistId: selectedReleases[0]?.id || 'unknown', // Simplified for now
+        selectedReleaseIds: selectedReleases.map(r => r.id) 
+      }
+    });
+    
+    setSearchingArtist(null);
+    setArtistReleases([]);
+
+    try {
+      // Fetch tracks for all selected releases to get song count
+      let totalSongs = 0;
+      let processed = 0;
+      
+      for (const release of selectedReleases) {
+        const tracks = await getReleaseGroupTracks(release.id);
+        totalSongs += tracks.length;
+        processed++;
+        updateSource(sourceId, { progress: 10 + (processed / selectedReleases.length) * 80 });
+      }
+      
+      updateSource(sourceId, {
+        songCount: totalSongs,
+        status: 'ready',
+        progress: 100,
+        coverUrl: selectedReleases[0]?.cover_art?.url // Use first release art as source cover
+      });
+    } catch (error) {
+      updateSource(sourceId, { status: 'error' });
+    }
   };
 
   const handleImportPlaylist = (url: string) => {
@@ -58,14 +122,13 @@ export function SessionBuilder(): JSX.Element {
     setQuery("");
     setStatus('building');
 
-    // Simulate import progress for Phase 2 demo
-    // In Phase 4, this will be handled by the real import logic
+    // Simulate import progress for now (Phase 4 will have real logic)
     let p = 20;
     const interval = setInterval(() => {
       p += 15;
       if (p >= 95) {
         clearInterval(interval);
-        useSessionBuilderStore.getState().updateSource(tempId, {
+        updateSource(tempId, {
           name: 'Imported Playlist',
           songCount: 42,
           status: 'ready',
@@ -73,7 +136,7 @@ export function SessionBuilder(): JSX.Element {
           coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300&h=300&fit=crop'
         });
       } else {
-        useSessionBuilderStore.getState().updateSource(tempId, { progress: p });
+        updateSource(tempId, { progress: p });
       }
     }, 400);
   };
@@ -92,7 +155,7 @@ export function SessionBuilder(): JSX.Element {
         </p>
       </div>
 
-      <div className="w-full max-w-3xl mx-auto sticky top-0 z-20">
+      <div className="w-full max-w-3xl mx-auto sticky top-0 z-30">
         <UnifiedSearchBar 
           query={query}
           onQueryChange={setQuery}
@@ -105,7 +168,20 @@ export function SessionBuilder(): JSX.Element {
         />
       </div>
 
-      {sources.length > 0 && status !== 'empty' ? (
+      {searchingArtist ? (
+        <div className="w-full animate-in slide-in-from-top-8 duration-500">
+          <InlineArtistSelector 
+            artistName={searchingArtist.name}
+            releases={artistReleases}
+            loading={loadingReleases}
+            onAdd={handleAddArtistReleases}
+            onCancel={() => {
+              setSearchingArtist(null);
+              setArtistReleases([]);
+            }}
+          />
+        </div>
+      ) : sources.length > 0 && status !== 'empty' ? (
         <div className="space-y-8 animate-in fade-in duration-500 pb-24">
           <div className="flex items-center justify-between">
             <h2 className="font-mono font-black uppercase tracking-widest text-primary/60 text-sm">
@@ -128,18 +204,18 @@ export function SessionBuilder(): JSX.Element {
           <div className="flex justify-center pt-12">
             <Button 
               size="lg"
-              disabled={sources.some(s => s.status === 'loading')}
+              disabled={sources.some(s => s.status === 'loading') || sources.length === 0}
               onClick={() => setView("review")}
               className="h-20 px-12 rounded-3xl bg-primary text-primary-foreground font-mono font-black uppercase tracking-[0.2em] text-xl hover:scale-105 active:scale-95 transition-all group shadow-[0_20px_50px_rgba(var(--primary-rgb),0.3)] disabled:opacity-50 disabled:hover:scale-100"
             >
-              Review & Clean <ArrowRight className="ml-4 h-7 w-7 group-hover:translate-x-2 transition-transform" />
+              Next: Review & Clean <ArrowRight className="ml-4 h-7 w-7 group-hover:translate-x-2 transition-transform" />
             </Button>
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 pb-12">
           <button 
-            onClick={() => {}} // Focus search bar
+            onClick={() => {}} // Focus search bar behavior
             className="bg-muted/10 p-10 rounded-[2.5rem] border border-border/40 hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer group text-left flex flex-col gap-6"
           >
             <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform group-hover:rotate-3">
@@ -154,7 +230,7 @@ export function SessionBuilder(): JSX.Element {
           </button>
 
           <button 
-            onClick={() => {}} // Focus search bar
+            onClick={() => {}} // Focus search bar behavior
             className="bg-muted/10 p-10 rounded-[2.5rem] border border-border/40 hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer group text-left flex flex-col gap-6"
           >
             <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform group-hover:-rotate-3">
