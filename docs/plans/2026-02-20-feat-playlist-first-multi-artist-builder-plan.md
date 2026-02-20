@@ -122,9 +122,9 @@ export type RankingSource = ArtistAllSource | ArtistPartialSource | PlaylistSour
 - [x] Scaffold `SessionBuilder.tsx` as a full-screen view.
 
 ### Phase 2: Unified Search & Source Cards
-- [ ] Implement `UnifiedSearchBar.tsx` with URL detection and paste-to-import.
-- [ ] Implement `SourceCard.tsx` with loading/progress states.
-- [ ] Build the "Quick Start" dashboard empty state.
+- [x] Implement `UnifiedSearchBar.tsx` with URL detection and paste-to-import.
+- [x] Implement `SourceCard.tsx` with loading/progress states.
+- [x] Build the "Quick Start" dashboard empty state.
 
 ### Phase 3: Inline Selection & Multi-Source
 - [ ] Refactor `ReleaseList.tsx` into an "Inline Selection" mode.
