@@ -131,6 +131,7 @@ export type RankingSource = ArtistAllSource | ArtistPartialSource | PlaylistSour
 - [x] Logic for merging individual release selections into an `ArtistPartialSource`.
 
 ### Phase 4: Review & Launch
-- [ ] Build the "Review & Clean" step as a dedicated view in the builder.
-- [ ] Implement virtualization (`react-window`) and Web Worker deduplication.
-- [ ] Implement the soft-cap warning UI.
+- [x] Build the "Review & Clean" step as a dedicated view in the builder.
+- [x] Implement virtualization (`react-window`) and Web Worker deduplication.
+- [x] Implement the soft-cap warning UI.
+

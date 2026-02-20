@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, type JSX } from "react";
-import { SessionBuilder } from "@/components/SessionBuilder";
+import { SessionBuilder, ReviewView } from "@/components/SessionBuilder";
 import { RankingWidget } from "@/components/RankingWidget";
 import { AnalyticsPage } from "@/components/AnalyticsPage";
 import { MyRankingsOverview } from "@/components/MyRankingsOverview";
@@ -94,6 +94,11 @@ export default function Home(): JSX.Element {
         
         {view === "create" ? (
           <SessionBuilder />
+        ) : view === "review" ? (
+          <ReviewView 
+            onBack={() => setView("create")}
+            onConfirm={startRankingSession}
+          />
         ) : view === "analytics" ? (
           <div className="flex flex-col min-h-0 h-full w-full overflow-hidden px-4 md:px-8">
             <AnalyticsPage isSidebarCollapsed={true} />

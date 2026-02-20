@@ -11,6 +11,7 @@ export interface BaseSource {
   songCount: number;
   status: 'pending' | 'loading' | 'ready' | 'error';
   progress?: number;
+  resolvedTracks?: SongInput[];
 }
 
 export interface ArtistAllSource extends BaseSource {

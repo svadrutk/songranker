@@ -5,7 +5,7 @@ import { useSessionBuilderStore, useNavigationStore } from "@/lib/store";
 import { UnifiedSearchBar } from "./UnifiedSearchBar";
 import { SourceCard } from "./SourceCard";
 import { InlineArtistSelector } from "./InlineArtistSelector";
-import { suggestArtists, searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup } from "@/lib/api";
+import { suggestArtists, searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup, type SongInput } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
 import { Trash2, ArrowRight, Music, Link as LinkIcon, Clock, Loader2 } from "lucide-react";
@@ -89,9 +89,18 @@ export function SessionBuilder(): JSX.Element {
       // Fetch tracks for all selected releases to get song count
       let totalSongs = 0;
       let processed = 0;
+      const sourceTracks: SongInput[] = [];
       
       for (const release of selectedReleases) {
         const tracks = await getReleaseGroupTracks(release.id);
+        const mapped: SongInput[] = tracks.map(t => ({
+          name: t,
+          artist: artistName,
+          album: release.title,
+          cover_url: release.cover_art?.url || `https://coverartarchive.org/release-group/${release.id}/front-250`,
+          spotify_id: null
+        }));
+        sourceTracks.push(...mapped);
         totalSongs += tracks.length;
         processed++;
         updateSource(sourceId, { progress: 10 + (processed / selectedReleases.length) * 80 });
@@ -101,6 +110,7 @@ export function SessionBuilder(): JSX.Element {
         songCount: totalSongs,
         status: 'ready',
         progress: 100,
+        resolvedTracks: sourceTracks,
         coverUrl: selectedReleases[0]?.cover_art?.url // Use first release art as source cover
       });
     } catch (error) {
