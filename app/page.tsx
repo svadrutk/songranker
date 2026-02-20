@@ -7,10 +7,6 @@ import { AnalyticsPage } from "@/components/AnalyticsPage";
 import { MyRankingsOverview } from "@/components/MyRankingsOverview";
 import { createSession, type SongInput } from "@/lib/api";
 import { useAuth } from "@/components/AuthProvider";
-import { DeduplicationModal } from "@/components/DeduplicationModal";
-import {
-  type DuplicateGroup,
-} from "@/lib/deduplication";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence } from "framer-motion";
@@ -24,15 +20,12 @@ export default function Home(): JSX.Element {
     view,
     sessionId,
     openInResultsView,
-    setView,
     navigateToCreate,
     navigateToRanking,
     navigateBackFromResults,
   } = useNavigationStore();
   
   // Local state for ranking workflow
-  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
-  const [finalSongList, setFinalSongList] = useState<string[]>([]);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,13 +55,6 @@ export default function Home(): JSX.Element {
     [user?.id, navigateToRanking]
   );
 
-  const handleConfirmDeduplication = useCallback(
-    async (songs: string[]) => {
-      // Deduplication handling will be moved to SessionBuilder in later phases
-    },
-    []
-  );
-
   const handleSessionDelete = useCallback((id: string) => {
     if (view === "ranking" && sessionId === id) {
       navigateToCreate();
@@ -96,7 +82,7 @@ export default function Home(): JSX.Element {
           <SessionBuilder />
         ) : view === "review" ? (
           <ReviewView 
-            onBack={() => setView("create")}
+            onBack={() => navigateToCreate()}
             onConfirm={startRankingSession}
           />
         ) : view === "analytics" ? (
@@ -116,14 +102,6 @@ export default function Home(): JSX.Element {
           />
         )}
       </main>
-
-      <DeduplicationModal
-        isOpen={view === "review"}
-        onClose={() => setView("create")}
-        onConfirm={handleConfirmDeduplication}
-        duplicateGroups={duplicateGroups}
-        allSongs={finalSongList}
-      />
     </div>
   );
 }

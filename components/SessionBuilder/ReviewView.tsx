@@ -3,8 +3,8 @@
 import { useState, useMemo, type JSX } from "react";
 import { Check, Merge, Split, ArrowLeft, Play, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { findPotentialDuplicates, resolveSourcesToSongs, type DuplicateGroup } from "@/lib/deduplication";
-import { useSessionBuilderStore, useNavigationStore } from "@/lib/store";
+import { findPotentialDuplicates, resolveSourcesToSongs } from "@/lib/deduplication";
+import { useSessionBuilderStore } from "@/lib/store";
 import type { SongInput } from "@/lib/api";
 
 type ReviewViewProps = Readonly<{

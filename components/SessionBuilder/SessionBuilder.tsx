@@ -8,7 +8,7 @@ import { InlineArtistSelector } from "./InlineArtistSelector";
 import { suggestArtists, searchArtistReleaseGroups, getReleaseGroupTracks, type ReleaseGroup, type SongInput } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/hooks";
 import { Button } from "@/components/ui/button";
-import { Trash2, ArrowRight, Music, Link as LinkIcon, Clock, Loader2 } from "lucide-react";
+import { Trash2, ArrowRight, Music, Link as LinkIcon, Clock } from "lucide-react";
 
 export function SessionBuilder(): JSX.Element {
   const { sources, addSource, removeSource, resetDraft, status, setStatus, updateSource } = useSessionBuilderStore();
@@ -77,7 +77,7 @@ export function SessionBuilder(): JSX.Element {
       status: 'loading',
       progress: 10,
       data: { 
-        artistId: selectedReleases[0]?.id || 'unknown', // Simplified for now
+        artistId: selectedReleases[0]?.id || 'unknown',
         selectedReleaseIds: selectedReleases.map(r => r.id) 
       }
     });
@@ -111,9 +111,9 @@ export function SessionBuilder(): JSX.Element {
         status: 'ready',
         progress: 100,
         resolvedTracks: sourceTracks,
-        coverUrl: selectedReleases[0]?.cover_art?.url // Use first release art as source cover
+        coverUrl: selectedReleases[0]?.cover_art?.url
       });
-    } catch (error) {
+    } catch {
       updateSource(sourceId, { status: 'error' });
     }
   };
@@ -132,7 +132,7 @@ export function SessionBuilder(): JSX.Element {
     setQuery("");
     setStatus('building');
 
-    // Simulate import progress for now (Phase 4 will have real logic)
+    // Simulate import progress
     let p = 20;
     const interval = setInterval(() => {
       p += 15;
@@ -225,7 +225,6 @@ export function SessionBuilder(): JSX.Element {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 pb-12">
           <button 
-            onClick={() => {}} // Focus search bar behavior
             className="bg-muted/10 p-10 rounded-[2.5rem] border border-border/40 hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer group text-left flex flex-col gap-6"
           >
             <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform group-hover:rotate-3">
@@ -240,7 +239,6 @@ export function SessionBuilder(): JSX.Element {
           </button>
 
           <button 
-            onClick={() => {}} // Focus search bar behavior
             className="bg-muted/10 p-10 rounded-[2.5rem] border border-border/40 hover:bg-muted/20 hover:border-primary/20 transition-all cursor-pointer group text-left flex flex-col gap-6"
           >
             <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform group-hover:-rotate-3">

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useMemo, type JSX } from "react";
-import { Plus, Check, X, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import type { ReleaseGroup } from "@/lib/api";
 import { ReleaseFilters, type ReleaseType } from "@/components/Catalog/ReleaseFilters";
-import { ReleaseItem } from "@/components/Catalog/ReleaseItem";
 import { Button } from "@/components/ui/button";
 
 type InlineArtistSelectorProps = Readonly<{

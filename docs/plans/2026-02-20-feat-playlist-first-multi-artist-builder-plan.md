@@ -1,7 +1,7 @@
 ---
 title: "feat: Playlist-First & Multi-Artist Session Builder"
 type: feat
-status: active
+status: completed
 date: 2026-02-20
 ---
 
@@ -88,15 +88,15 @@ export type RankingSource = ArtistAllSource | ArtistPartialSource | PlaylistSour
 - Persistence: Use Zustand's `persist` middleware with `localStorage`, including a `version` and `migrate` function.
 
 ## Acceptance Criteria
-- [ ] Navbar contains distinct links for "Create", "My Rankings", and "Analytics".
-- [ ] Sidebar is completely removed from all views.
-- [ ] Unified search bar correctly identifies Spotify/Apple Music playlist links via regex.
-- [ ] Users can add multiple artists and multiple playlists to a single session.
-- [ ] Playlist imports show a determinate progress bar ("Finding tracks: 45/100").
-- [ ] Session Builder canvas displays rich cards for each added source with a "Remove" option.
-- [ ] "Start Ranking" triggers a "Review & Clean" step (manual deduplication).
-- [ ] Soft-cap warning appears if the total song count exceeds 150.
-- [ ] The "Draft" is saved to `localStorage` and persists across page refreshes.
+- [x] Navbar contains distinct links for "Create", "My Rankings", and "Analytics".
+- [x] Sidebar is completely removed from all views.
+- [x] Unified search bar correctly identifies Spotify/Apple Music playlist links via regex.
+- [x] Users can add multiple artists and multiple playlists to a single session.
+- [x] Playlist imports show a determinate progress bar ("Finding tracks: 45/100").
+- [x] Session Builder canvas displays rich cards for each added source with a "Remove" option.
+- [x] "Start Ranking" triggers a "Review & Clean" step (manual deduplication).
+- [x] Soft-cap warning appears if the total song count exceeds 150.
+- [x] The "Draft" is saved to `localStorage` and persists across page refreshes.
 
 ## Success Metrics
 - Increase in multi-artist ranking sessions.
