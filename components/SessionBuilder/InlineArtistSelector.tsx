@@ -5,6 +5,7 @@ import { Check, Loader2 } from "lucide-react";
 import type { ReleaseGroup } from "@/lib/api";
 import { ReleaseFilters, type ReleaseType } from "@/components/Catalog/ReleaseFilters";
 import { Button } from "@/components/ui/button";
+import { CoverArt } from "@/components/CoverArt";
 
 type InlineArtistSelectorProps = Readonly<{
   artistName: string;
@@ -120,10 +121,12 @@ export function InlineArtistSelector({
                 }`}
               >
                 <div className="relative h-12 w-12 rounded-lg overflow-hidden shrink-0 shadow-sm">
-                  {/* Reuse image logic or cover component */}
-                  <div className="bg-muted w-full h-full flex items-center justify-center font-mono text-[10px] font-bold text-muted-foreground uppercase">
-                    {release.title.charAt(0)}
-                  </div>
+                  <CoverArt 
+                    id={release.id} 
+                    title={release.title} 
+                    url={release.cover_art?.url}
+                    className="h-full w-full"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className={`font-mono text-xs font-black uppercase truncate ${selectedIds.includes(release.id) ? "text-primary" : ""}`}>

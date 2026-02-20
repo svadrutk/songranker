@@ -45,7 +45,6 @@ export function SessionBuilder(): JSX.Element {
   }, [debouncedQuery, searchingArtist]);
 
   const handleSuggestionClick = async (suggestion: string) => {
-    setQuery("");
     setShowSuggestions(false);
     setSearchingArtist({ name: suggestion });
     setLoadingReleases(true);
@@ -156,9 +155,6 @@ export function SessionBuilder(): JSX.Element {
   return (
     <div className="flex flex-col h-full w-full max-w-7xl mx-auto px-4 md:px-8 py-12 gap-12 overflow-y-auto custom-scrollbar">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-6xl font-mono font-black uppercase tracking-tighter">
-          Create Session
-        </h1>
         <p className="text-muted-foreground font-mono text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
           Mix your favorite playlists and artists into a single ranking session. 
           The ultimate way to compare your taste across sources.
