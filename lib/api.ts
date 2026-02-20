@@ -368,7 +368,19 @@ export type FeedbackResponse = {
   id: string;
   message: string;
   created_at: string;
+};export type PlaylistImportRequest = {
+  url: string;
+  user_id?: string | null;
+  limit?: number | null;
+  rank_mode?: string | null;
 };
+
+export async function importPlaylist(payload: PlaylistImportRequest): Promise<SessionResponse> {
+  return fetchBackend<SessionResponse>("/imports/playlist", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 
 export async function submitFeedback(payload: FeedbackCreate): Promise<FeedbackResponse> {
   return fetchBackend<FeedbackResponse>("/feedback", {

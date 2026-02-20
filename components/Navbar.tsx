@@ -7,12 +7,13 @@ import { LogOut, Send } from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useFeedback } from "./FeedbackProvider";
+import { cn } from "@/lib/utils";
 import { useNavigationStore } from "@/lib/store";
 
 export function Navbar() {
   const { user, signOut, openAuthModal } = useAuth();
   const { openFeedback } = useFeedback();
-  const { navigateToCatalog, setSidebarCollapsed } = useNavigationStore();
+  const { view, navigateToCreate, navigateToAnalytics, navigateToMyRankings, setSidebarCollapsed } = useNavigationStore();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -21,8 +22,8 @@ export function Navbar() {
   }, []);
 
   const handleLogoClick = () => {
-    navigateToCatalog();
-    setSidebarCollapsed(false);
+    navigateToCreate();
+    setSidebarCollapsed(true);
   };
 
   // Use dark logo as default during SSR to avoid hydration mismatch
@@ -31,22 +32,54 @@ export function Navbar() {
   return (
     <nav className="w-full border-b bg-background/95 backdrop-blur-md sticky top-0 z-[60]">
       <div className="w-full px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={handleLogoClick}
-          className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity"
-        >
-          <Image
-            src={logoSrc}
-            alt="Chorusboard Logo"
-            width={36}
-            height={36}
-            className="h-9 w-9 md:h-12 md:w-12"
-          />
-          <h1 className="font-mono text-xl md:text-3xl font-bold tracking-tighter lowercase shrink-0">
-            chorusboard
-          </h1>
-        </button>
+        <div className="flex items-center gap-4 md:gap-12">
+          <button
+            type="button"
+            onClick={handleLogoClick}
+            className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity"
+          >
+            <Image
+              src={logoSrc}
+              alt="Chorusboard Logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 md:h-12 md:w-12"
+            />
+            <h1 className="font-mono text-xl md:text-3xl font-bold tracking-tighter lowercase shrink-0">
+              chorusboard
+            </h1>
+          </button>
+
+          <div className="hidden md:flex items-center gap-8">
+            <button
+              onClick={() => navigateToCreate()}
+              className={cn(
+                "font-mono text-sm uppercase font-black tracking-widest transition-colors",
+                view === "create" ? "text-primary" : "text-muted-foreground hover:text-primary"
+              )}
+            >
+              Create
+            </button>
+            <button
+              onClick={() => navigateToMyRankings(false)}
+              className={cn(
+                "font-mono text-sm uppercase font-black tracking-widest transition-colors",
+                view === "my_rankings" ? "text-primary" : "text-muted-foreground hover:text-primary"
+              )}
+            >
+              My Rankings
+            </button>
+            <button
+              onClick={() => navigateToAnalytics()}
+              className={cn(
+                "font-mono text-sm uppercase font-black tracking-widest transition-colors",
+                view === "analytics" ? "text-primary" : "text-muted-foreground hover:text-primary"
+              )}
+            >
+              Stats
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2 md:gap-6">
           <Button
