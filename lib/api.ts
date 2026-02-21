@@ -173,7 +173,14 @@ async function fetchBackend<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      const message = errorData.detail || `API Error: ${response.status} ${response.statusText}`;
+      let message = "";
+      if (typeof errorData.detail === 'string') {
+        message = errorData.detail;
+      } else if (typeof errorData.detail === 'object' && errorData.detail?.message) {
+        message = errorData.detail.message;
+      } else {
+        message = `API Error: ${response.status} ${response.statusText}`;
+      }
       throw new Error(message);
     }
 

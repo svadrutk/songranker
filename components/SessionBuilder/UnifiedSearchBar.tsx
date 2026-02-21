@@ -41,8 +41,12 @@ export function UnifiedSearchBar({
   const isUrl = isPlaylistUrl(query);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && isUrl) {
-      onImportPlaylist(query);
+    if (e.key === "Enter") {
+      if (isUrl) {
+        onImportPlaylist(query);
+      } else if (suggestions.length > 0) {
+        onSuggestionClick(suggestions[0]);
+      }
     }
   };
 
