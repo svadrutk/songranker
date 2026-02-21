@@ -33,12 +33,15 @@ export type SessionCreate = {
 export type SessionResponse = {
   session_id: string;
   count: number;
+  playlist_name?: string | null;
+  image_url?: string | null;
 };
 
 export type SessionSummary = {
   session_id: string;
   created_at: string;
   primary_artist: string;
+  display_name?: string | null;
   song_count: number;
   comparison_count: number;
   convergence_score: number;
@@ -54,6 +57,9 @@ export type ComparisonPair = {
 
 export type SessionDetail = {
   session_id: string;
+  playlist_id?: string | null;
+  playlist_name?: string | null;
+  image_url?: string | null;
   songs: SessionSong[];
   comparison_count: number;
   convergence_score?: number;
