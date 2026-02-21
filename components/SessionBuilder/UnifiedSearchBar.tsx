@@ -33,8 +33,8 @@ export function UnifiedSearchBar({
   
   // URL detection regex
   const isPlaylistUrl = (val: string) => {
-    const spotifyRegex = /^(https:\/\/open\.spotify\.com\/playlist\/|spotify:playlist:)[a-zA-Z0-9]+/;
-    const appleMusicRegex = /^https:\/\/music\.apple\.com\/[a-z]{2}\/playlist\/[a-zA-Z0-9.\-]+/;
+    const spotifyRegex = /spotify\.com\/playlist\/([a-zA-Z0-9]+)/;
+    const appleMusicRegex = /music\.apple\.com\/[a-z]{2}\/playlist\/[a-zA-Z0-9.\-]+\/(pl\.[a-f0-9]+)/;
     return spotifyRegex.test(val) || appleMusicRegex.test(val);
   };
 

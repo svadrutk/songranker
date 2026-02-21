@@ -126,6 +126,9 @@ export function SessionBuilder(): JSX.Element {
   };
 
   const handleImportPlaylist = async (url: string) => {
+    // Clean URL: Remove query parameters like ?si=... which can cause backend parsing issues
+    const cleanUrl = url.split('?')[0];
+    
     const tempId = `playlist-${Date.now()}`;
     addSource({
       id: tempId,
@@ -134,13 +137,13 @@ export function SessionBuilder(): JSX.Element {
       songCount: 0,
       status: 'loading',
       progress: 10,
-      data: { platform: url.includes('spotify') ? 'spotify' : 'apple', playlistId: url }
+      data: { platform: cleanUrl.includes('spotify') ? 'spotify' : 'apple', playlistId: cleanUrl }
     });
     setQuery("");
     setStatus('building');
 
     try {
-      const response = await importPlaylist({ url });
+      const response = await importPlaylist({ url: cleanUrl });
       
       // Fetch session details to get actual songs and count
       const details = await getSessionDetail(response.session_id);
