@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Fragment, useRef } from "react";
 import type { JSX } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getSessionDetail, createComparison, undoLastComparison, type SessionSong, type SessionDetail } from "@/lib/api";
@@ -46,6 +47,8 @@ type RankingWidgetProps = Readonly<{
   initialMode?: string;
   /** When openInResultsView, called when user taps "Keep Ranking" / back from results (e.g. return to My Rankings). */
   onBackFromResults?: () => void;
+  /** Initial session data to avoid waterfall fetching on mount. */
+  initialData?: SessionDetail | null;
 }>;
 
 export function RankingWidget({
@@ -54,19 +57,88 @@ export function RankingWidget({
   openInResultsView = false,
   initialMode,
   onBackFromResults,
+  initialData,
 }: RankingWidgetProps): JSX.Element {
   const { user, openAuthModal } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
   const isMounted = useRef(true);
+
+  const setMode = useCallback((mode: "duel" | "results") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (mode === "results") {
+      params.set("mode", "results");
+    } else {
+      params.delete("mode");
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  }, [router, pathname, searchParams]);
   
   // Core state
-  const [songs, setSongs] = useState<SessionSong[]>([]);
-  const [currentPair, setCurrentPair] = useState<[SessionSong, SessionSong] | null>(null);
-  const [comparisonHistory, setComparisonHistory] = useState<ComparisonHistory>(() => createComparisonHistory());
+  const [songs, setSongs] = useState<SessionSong[]>(() => {
+    if (initialData?.songs) {
+      const comparisonCounts: Record<string, number> = {};
+      if (initialData.comparisons) {
+        for (const comp of initialData.comparisons) {
+          const isMeaningful = comp.winner_id != null || comp.is_tie === true;
+          if (!isMeaningful) continue;
+          comparisonCounts[comp.song_a_id] = (comparisonCounts[comp.song_a_id] ?? 0) + 1;
+          comparisonCounts[comp.song_b_id] = (comparisonCounts[comp.song_b_id] ?? 0) + 1;
+        }
+      }
+      return initialData.songs.map(song => ({
+        ...song,
+        // If comparisons were stripped (guest), use the count from the song object itself
+        comparison_count: initialData.comparisons 
+          ? (comparisonCounts[song.song_id] ?? 0)
+          : song.comparison_count
+      }));
+    }
+    return [];
+  });
+
+  const [comparisonHistory, setComparisonHistory] = useState<ComparisonHistory>(() => {
+    if (initialData?.comparisons?.length) {
+      return buildHistoryFromComparisons(initialData.comparisons);
+    }
+    return createComparisonHistory();
+  });
+
+  const [currentPair, setCurrentPair] = useState<[SessionSong, SessionSong] | null>(() => {
+    if (initialData?.songs && initialData.songs.length >= 2) {
+      const history = initialData.comparisons?.length 
+        ? buildHistoryFromComparisons(initialData.comparisons)
+        : createComparisonHistory();
+      
+      const comparisonCounts: Record<string, number> = {};
+      if (initialData.comparisons) {
+        for (const comp of initialData.comparisons) {
+          const isMeaningful = comp.winner_id != null || comp.is_tie === true;
+          if (!isMeaningful) continue;
+          comparisonCounts[comp.song_a_id] = (comparisonCounts[comp.song_a_id] ?? 0) + 1;
+          comparisonCounts[comp.song_b_id] = (comparisonCounts[comp.song_b_id] ?? 0) + 1;
+        }
+      }
+      const songsWithAccurateCounts = initialData.songs.map(song => ({
+        ...song,
+        // If comparisons were stripped (guest), use the count from the song object itself
+        comparison_count: initialData.comparisons 
+          ? (comparisonCounts[song.song_id] ?? 0)
+          : song.comparison_count
+      }));
+
+      return getNextPair(songsWithAccurateCounts, history);
+    }
+    return null;
+  });
+
   const [isLoading, setIsLoading] = useState(false);
-  const [totalDuels, setTotalDuels] = useState(0);
-  const [convergence, setConvergence] = useState(0);
-  const [isFinished, setIsFinished] = useState(false);
+  const [totalDuels, setTotalDuels] = useState(initialData?.comparison_count ?? 0);
+  const [convergence, setConvergence] = useState(initialData?.convergence_score ?? 0);
+  
+  const isFinished = searchParams.get("mode") === "results" || openInResultsView || !user;
   
   // UI state
   const [winnerId, setWinnerId] = useState<string | null>(null);
@@ -108,12 +180,22 @@ export function RankingWidget({
   useEffect(() => {
     if (!isRanking || !sessionId) return;
 
+    // If we have initialData for THIS sessionId, we can skip the initial fetch
+    // This avoids the data fetching waterfall in MPA mode
+    if (initialData && initialData.session_id === sessionId && songs.length > 0) {
+      // Still need to handle the initial mode/results view logic
+      if (openInResultsView || initialMode === "results" || !user) {
+        setMode("results");
+      }
+      return;
+    }
+
+
     // Reset state
     setSongs([]);
     setCurrentPair(null);
     setTotalDuels(0);
     setConvergence(0);
-    setIsFinished(false);
     setWinnerId(null);
     setIsTie(false);
     setIsSkipping(false);
@@ -125,7 +207,9 @@ export function RankingWidget({
     async function loadSongs(): Promise<void> {
       setIsLoading(true);
       try {
-        const detail = await getSessionDetail(sessionId!);
+        // Only include comparisons if we have a logged-in user (potential owner)
+        // Guests viewing results don't need the full history, minimizing data exposure.
+        const detail = await getSessionDetail(sessionId!, { includeComparisons: !!user });
         if (detail && isMounted.current && isCurrent) {
           // Build history from existing comparisons (preserves state across page refresh)
           const detailWithComparisons = detail as SessionDetail;
@@ -150,7 +234,10 @@ export function RankingWidget({
           
           const songsWithAccurateCounts = detail.songs.map(song => ({
             ...song,
-            comparison_count: comparisonCounts[song.song_id] ?? 0
+            // If comparisons were stripped (guest), use the count from the song object itself
+            comparison_count: detailWithComparisons.comparisons 
+              ? (comparisonCounts[song.song_id] ?? 0)
+              : song.comparison_count
           }));
           
           setSongs(songsWithAccurateCounts);
@@ -160,7 +247,7 @@ export function RankingWidget({
           resetTimer();
           
           if (openInResultsView || initialMode === "results" || !user) {
-            setIsFinished(true);
+            setMode("results");
           }
         }
       } catch (error) {
@@ -176,11 +263,11 @@ export function RankingWidget({
     return () => {
       isCurrent = false;
     };
-  }, [isRanking, sessionId, openInResultsView, resetTimer, hideRankNotification, initialMode, user]);
+  }, [isRanking, sessionId, openInResultsView, resetTimer, hideRankNotification, initialMode, user, initialData, songs.length, setMode]);
 
   const handleChoice = useCallback(
     async (winner: SessionSong | null, tie: boolean = false) => {
-      if (!currentPair || !sessionId || winnerId) return;
+      if (!user || !currentPair || !sessionId || winnerId) return;
 
       const [songA, songB] = currentPair;
       const wId = winner?.song_id || null;
@@ -292,11 +379,11 @@ export function RankingWidget({
         console.error("Failed to sync comparison:", error);
       }
     },
-    [currentPair, sessionId, winnerId, songs, queryClient, comparisonHistory, getDecisionTime, resetTimer, showRankUpdateNotification]
+    [currentPair, sessionId, winnerId, songs, queryClient, comparisonHistory, getDecisionTime, resetTimer, showRankUpdateNotification, user]
   );
 
   const handleUndo = useCallback(async (): Promise<void> => {
-    if (!sessionId || totalDuels === 0 || isUndoing) return;
+    if (!user || !sessionId || totalDuels === 0 || isUndoing) return;
     setIsUndoing(true);
     try {
       const response = await undoLastComparison(sessionId);
@@ -347,10 +434,10 @@ export function RankingWidget({
     } finally {
       if (isMounted.current) setIsUndoing(false);
     }
-  }, [sessionId, totalDuels, isUndoing, songs, comparisonHistory, queryClient, resetTimer]);
+  }, [sessionId, totalDuels, isUndoing, songs, comparisonHistory, queryClient, resetTimer, user]);
 
   const handleSkip = useCallback(async (): Promise<void> => {
-    if (!currentPair || !sessionId) return;
+    if (!user || !currentPair || !sessionId) return;
     
     setIsSkipping(true);
     const decisionTime = getDecisionTime();
@@ -389,7 +476,7 @@ export function RankingWidget({
       is_tie: false,
       decision_time_ms: decisionTime,
     }).catch(err => console.error("Failed to record skip:", err));
-  }, [currentPair, sessionId, songs, comparisonHistory, getDecisionTime, resetTimer]);
+  }, [currentPair, sessionId, songs, comparisonHistory, getDecisionTime, resetTimer, user]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -437,7 +524,7 @@ export function RankingWidget({
     return (
       <Leaderboard
         songs={songs}
-        onContinue={openInResultsView && onBackFromResults ? onBackFromResults : () => setIsFinished(false)}
+        onContinue={openInResultsView && onBackFromResults ? onBackFromResults : () => setMode("duel")}
         isPreview={false}
         backButtonLabel={openInResultsView ? "Back to My Rankings" : undefined}
         sessionId={sessionId}
@@ -488,7 +575,7 @@ export function RankingWidget({
           displayScore={displayScore}
           totalDuels={totalDuels}
           songCount={songs.length}
-          onViewResults={() => setIsFinished(true)}
+          onViewResults={() => setMode("results")}
           onPeekRankings={() => setShowPeek(true)}
         />
 

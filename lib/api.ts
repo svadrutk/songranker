@@ -1,5 +1,8 @@
 "use server";
 
+import { cache } from "react";
+import { createClient } from "@/lib/supabase/server";
+
 export type CoverArtArchive = {
   artwork: boolean | null;
   back: boolean | null;
@@ -149,8 +152,6 @@ export type ArtistsWithLeaderboardsResponse = {
   artists: ArtistWithLeaderboard[];
 };
 
-import { cache } from "react";
-
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 // Helper to show errors visually
@@ -170,11 +171,23 @@ async function fetchBackend<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${BACKEND_URL}${endpoint}`;
+  
+  // Get Supabase session for authentication
+  let token: string | undefined;
+  try {
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token;
+  } catch (err) {
+    console.error("[API] Failed to get session:", err);
+  }
+
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         ...options.headers,
       },
     });
@@ -257,11 +270,24 @@ export async function getSessionSongs(sessionId: string): Promise<SessionSong[]>
   }
 }
 
-export const getSessionDetail = cache(async (sessionId: string): Promise<SessionDetail | null> => {
+export const getSessionDetail = cache(async (
+  sessionId: string, 
+  options: { includeComparisons?: boolean } = {}
+): Promise<SessionDetail | null> => {
+  const { includeComparisons = false } = options;
   try {
-    return await fetchBackend<SessionDetail>(`/sessions/${sessionId}`, {
+    const detail = await fetchBackend<SessionDetail>(`/sessions/${sessionId}`, {
       cache: "no-store",
     });
+
+    if (detail && !includeComparisons) {
+      // Strip comparison history for guest/results-only views to minimize data exposure
+      const rest = { ...detail };
+      delete rest.comparisons;
+      return rest as SessionDetail;
+    }
+
+    return detail;
   } catch (error) {
     console.error("[API] Error in getSessionDetail:", error);
     return null;
@@ -383,7 +409,9 @@ export type FeedbackResponse = {
   id: string;
   message: string;
   created_at: string;
-};export type PlaylistImportRequest = {
+};
+
+export type PlaylistImportRequest = {
   url: string;
   user_id?: string | null;
   limit?: number | null;
