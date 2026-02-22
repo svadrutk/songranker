@@ -1,6 +1,6 @@
 import { RankingWidget } from "@/components/RankingWidget";
 import { Suspense } from "react";
-import { getSessionDetail } from "@/lib/api";
+import { getSessionDetail, type SessionDetail } from "@/lib/api";
 import type { Metadata, ResolvingMetadata } from "next";
 
 export async function generateMetadata(
@@ -8,7 +8,15 @@ export async function generateMetadata(
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   const { id } = await params;
-  const session = await getSessionDetail(id, { includeComparisons: false });
+  
+  // Wrapped in a local try/catch for absolute safety
+  let session: SessionDetail | null = null;
+  try {
+    session = await getSessionDetail(id, { includeComparisons: false });
+  } catch (err) {
+    console.error("[Metadata] Metadata fetch failed:", err);
+  }
+
   const previousImages = (await parent).openGraph?.images || [];
 
   if (!session) {

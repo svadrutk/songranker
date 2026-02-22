@@ -277,6 +277,7 @@ export const getSessionDetail = cache(async (
 ): Promise<SessionDetail | null> => {
   const { includeComparisons = false } = options;
   try {
+    // We call fetchBackend which throws on !response.ok
     const detail = await fetchBackend<SessionDetail>(`/sessions/${sessionId}`, {
       cache: "no-store",
     });
@@ -290,7 +291,9 @@ export const getSessionDetail = cache(async (
 
     return detail;
   } catch (error) {
-    console.error("[API] Error in getSessionDetail:", error);
+    // Catch backend validation errors (like the Pydantic 'genres' error) 
+    // to prevent the entire page/metadata from crashing.
+    console.error(`[API] Failed to fetch session ${sessionId}:`, error);
     return null;
   }
 });
