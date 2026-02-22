@@ -194,19 +194,35 @@ async function fetchBackend<T>(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      // Safely try to get error detail from JSON
       let message = "";
-      if (typeof errorData.detail === 'string') {
-        message = errorData.detail;
-      } else if (typeof errorData.detail === 'object' && errorData.detail?.message) {
-        message = errorData.detail.message;
-      } else {
+      try {
+        const errorData = await response.json();
+        if (typeof errorData.detail === 'string') {
+          message = errorData.detail;
+        } else if (typeof errorData.detail === 'object' && errorData.detail?.message) {
+          message = errorData.detail.message;
+        } else {
+          message = `API Error: ${response.status} ${response.statusText}`;
+        }
+      } catch (jsonErr) {
         message = `API Error: ${response.status} ${response.statusText}`;
       }
+      
+      // If it's a backend validation error or internal error, log it but don't crash everything
+      if (response.status >= 500) {
+        console.warn(`[Backend Error] ${response.status} on ${endpoint}: ${message}`);
+      }
+      
       throw new Error(message);
     }
 
-    return await response.json();
+    try {
+      return await response.json();
+    } catch (parseErr) {
+      console.error("[API] Failed to parse JSON response:", parseErr);
+      throw new Error("Invalid response from server");
+    }
   } catch (error) {
     if (error instanceof TypeError && error.message.includes("fetch")) {
       const message = `Cannot reach backend at ${BACKEND_URL}. Check connection.`;
@@ -271,10 +287,10 @@ export async function getSessionSongs(sessionId: string): Promise<SessionSong[]>
   }
 }
 
-export const getSessionDetail = cache(async (
+export async function getSessionDetail(
   sessionId: string, 
   options: { includeComparisons?: boolean } = {}
-): Promise<SessionDetail | null> => {
+): Promise<SessionDetail | null> {
   const { includeComparisons = false } = options;
   try {
     // We call fetchBackend which throws on !response.ok
@@ -296,7 +312,7 @@ export const getSessionDetail = cache(async (
     console.error(`[API] Failed to fetch session ${sessionId}:`, error);
     return null;
   }
-});
+}
 
 export async function deleteSession(sessionId: string): Promise<boolean> {
   try {

@@ -67,8 +67,13 @@ export default async function RankingPage({
 
 async function RankingDataWrapper({ id, mode }: { id: string; mode?: string }) {
   // Fetch session data on the server inside the Suspense boundary
-  // We include comparisons so the widget can initialize its pairing history
-  const session = await getSessionDetail(id, { includeComparisons: true });
+  // Wrapped in try/catch to prevent backend failures from crashing the whole page
+  let session: SessionDetail | null = null;
+  try {
+    session = await getSessionDetail(id, { includeComparisons: true });
+  } catch (err) {
+    console.error("[Page] Data fetch failed for session:", id, err);
+  }
   
   return (
     <RankingWidget
